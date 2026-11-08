@@ -1,18 +1,16 @@
 /* LIFT unslop pass. Loaded after app.css. Welcome and the Log screens keep their original look (owner choice, 2026-11-08). */
 
 /* 5 · design system: one radius + spacing scale, used by the overrides below */
-:root{--r-card:26px;--pad-card:16px;--r-inner:calc(var(--r-card) - var(--pad-card));--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px}
+:root{--r-card:26px;--pad-card:16px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px}
 
 /* 15 · text contrast: secondary text from 62% to 74% ink */
 :root{--soft:rgba(21,22,27,.74)}
 html[data-theme=dark]{--soft:rgba(238,238,236,.74)}
 @media (prefers-color-scheme:dark){html[data-theme=device]{--soft:rgba(238,238,236,.74)}}
 
-/* 13 · remove embellishments: no sparkle dot field (original peach-to-blue background kept) */
-body:after{display:none}
+/* 13 · calmer embellishments: the sparkle field stays, but faint */
+body:after{opacity:calc(var(--spark-op) * .45)}
 .card{box-shadow:0 1px 2px rgba(0,0,0,.04)}
-
-/* 11 · accent: owner prefers the original colours, so buttons stay ink and red stays on the active tab */
 
 /* 10 · emphasize the CTA: secondary choices become quiet links */
 .alt{justify-content:center;gap:var(--sp-5);margin-top:var(--sp-3)}
@@ -27,7 +25,7 @@ body:after{display:none}
 .focus{padding:20px var(--pad-card) var(--sp-3)}
 
 /* 17 · align by eye: nudge play triangle */
-.btn .ic[href],.btn svg:first-child{margin-left:2px}
+.btn svg:first-child{margin-left:2px}
 
 /* 1 · filler badges: PR becomes a quiet marker */
 .prm{display:flex;color:var(--ok);margin-right:2px}
@@ -35,7 +33,6 @@ body:after{display:none}
 /* 12 · icons consistent: one size per context, one stroke */
 .ic{stroke-width:1.75}
 .rb .ic{width:20px;height:20px}
-.tab .ic{width:22px;height:22px}
 .restb .ic{width:20px;height:20px}
 
 /* 14 · inner radius = outer radius − padding */
@@ -51,11 +48,5 @@ p,.why,.lede,.wlede,.capx{text-wrap:pretty}
 .btn[aria-busy=true]>*,.btn2[aria-busy=true]>*{visibility:hidden}
 .btn[aria-busy=true]:after,.btn2[aria-busy=true]:after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}
 .btn,.btn2{position:relative}
-.skel{background:linear-gradient(90deg,var(--track) 25%,var(--glass-hi) 50%,var(--track) 75%);background-size:200% 100%;animation:shim 1.2s infinite;border-radius:var(--r-inner)}
-@keyframes spin{to{transform:rotate(360deg)}}@keyframes shim{to{background-position:-200% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* 20 · motion lives in motion.css */
-
-/* ---- Blend: bring back the original character on top of the cleanup ---- */
-/* faint sparkle field */
-body:after{display:block;opacity:calc(var(--spark-op) * .45)}

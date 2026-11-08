@@ -110,7 +110,6 @@ function renderSheet(fresh) {
   bindStrips(el);
   if (fresh && !sh.noFocus) { const f = $('[autofocus]', el); if (f) setTimeout(() => f.focus(), 60); }
 }
-function rerender() { render(); }
 
 /* ---------- dock: 4 tabs + the round button ---------- */
 const TAB_OF = {log: 'log', history: 'history', detail: 'history', progress: 'progress', stats: 'stats'};
@@ -227,10 +226,6 @@ function mrow(name, sets, range) {
   const st = !range ? 'ok' : sets < a ? 'under' : sets > b ? 'over' : 'ok';
   const v = Math.round(sets * 2) / 2;
   return `<div class="m"><span class="n">${esc(name)}</span><div class="tr">${range ? `<div class="band" style="left:${Math.min(a, max) / max * 100}%;width:${(Math.min(b, max) - Math.min(a, max)) / max * 100}%"></div>` : ''}<div class="fill" style="width:${Math.min(sets, max) / max * 100}%;background:var(--${st})"></div></div><span class="v" style="color:var(--${st})">${fmt(v)}</span></div>`;
-}
-function plateChip(k, off) {
-  const c = L.PLATE_COLORS[k], lt = [5, 1.25, 0.5, 0.25].includes(k);
-  return `<span class="plate ${lt ? 'lt' : ''} ${off ? 'off' : ''}" style="background:${c}">${fmt(k)}</span>`;
 }
 
 /* ---------- drawings: bar, stack, plate-loaded machine (true-size Olympic plates) ---------- */

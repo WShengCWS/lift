@@ -95,7 +95,6 @@ button.set{all:unset;box-sizing:border-box;display:grid;grid-template-columns:28
 .stat3 b small{font-family:Manrope,sans-serif;font-size:12px;font-weight:700;color:var(--soft)}
 .addb{width:36px;height:36px;border-radius:50%;background:var(--glass-hi);display:flex;align-items:center;justify-content:center;flex:none}
 button.addb{all:unset;cursor:pointer;width:40px;height:40px;border-radius:50%;background:var(--glass-hi);display:flex;align-items:center;justify-content:center;flex:none}
-.mus{font-size:11px;font-weight:800;padding:3px 7px;border-radius:8px;background:var(--glass-hi);color:var(--soft)}
 .heat{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:4px;margin-top:4px}.heat i{aspect-ratio:1;border-radius:5px;background:var(--off)}
 .heat .a{background:color-mix(in srgb,var(--ok) 45%,transparent)}.heat .b{background:var(--ok)}.heat .t{box-shadow:inset 0 0 0 2px var(--ink)}.heat .f{opacity:.35}
 .m{display:grid;grid-template-columns:86px 1fr 34px;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--track)}.m:last-child{border:0}
@@ -211,8 +210,6 @@ html[data-theme=dark] .delta span{color:#0c1a12}
 .ssh b{display:block;font-size:14px;font-weight:800;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ssh small{display:block;font-size:12px;font-weight:700;color:var(--soft);margin-top:1px}
 .sslink{display:flex;justify-content:center;color:var(--soft)}
 .ss{font-size:10px;font-weight:800;padding:2px 6px;border-radius:7px;background:var(--ink);color:var(--cta-ink);letter-spacing:.3px;flex:none}
-.notec{margin-top:12px;padding:10px 14px;display:flex;gap:10px;align-items:center}
-.notec input{all:unset;flex:1;font-size:14px;font-weight:600;min-width:0}.notec input::placeholder{color:var(--soft)}
 /* overview sheet */
 .ovl{padding:4px 12px 4px 10px;position:relative}
 .ovr{display:grid;grid-template-columns:34px 1fr 44px;align-items:center;gap:8px;height:66px;position:relative;border-bottom:1px solid var(--track);background:transparent}.ovr:last-child{border:0}

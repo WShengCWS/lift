@@ -60,14 +60,11 @@ button:active,.btn:active,.btn2:active,.logb:active,.pm button:active,.repsc but
 .pill-ghost{position:absolute;z-index:0;pointer-events:none;will-change:transform,width}
 .flip-hide{background:transparent!important;box-shadow:none!important}
 .chips .flip-hide,.chipz .flip-hide{border-color:transparent!important}
-/* 5 · switch knob stretches as it travels */
-.tog:after{transition:left 220ms var(--ease-in-out),width 220ms var(--ease-in-out)}
-.tog.moving:after{animation:knob 220ms var(--ease-in-out)}
-@keyframes knob{50%{width:25px}}
+/* 5 · the switch knob stretch is done in motion.js (the switch is re-rendered, so CSS transitions never run) */
 
 /* 7 + 8 · logging a set: a dot arcs from the button to the new done set, which pulses once */
 .arc-dot{position:fixed;left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--ok);z-index:70;pointer-events:none}
-.sets2 .pulse,.pulse{animation:pulse 420ms var(--ease-in-out)}
+.pulse{animation:pulse 420ms var(--ease-in-out)}
 @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent);transform:none}40%{transform:scale(1.05)}100%{box-shadow:0 0 0 12px transparent;transform:none}}
 
 /* 17 · the Log set button fills green through a mask, then returns to ink */
