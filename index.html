@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f7e6df">
+<meta name="theme-color" content="#f7e6df" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
 <meta name="description" content="LIFT: a personal training log. Fast between sets, honest about progress.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,6 +17,7 @@
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="unslop.css">
 <link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="theme.css">
 <script>
 /* apply theme and glass before first paint, so there is no flash */
 try { var s = JSON.parse(localStorage.getItem('lift2_settings') || 'null') || {};

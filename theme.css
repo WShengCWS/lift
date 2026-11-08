@@ -1,0 +1,77 @@
+/* LIFT palette (owner choice, 2026-11-09).
+   Dark mode: Midnight Black 60% · Electric Blue 30% · Sunset Orange 10%.
+   Light mode: the original LIFT look (peach-to-blue background, ink buttons, red active tab) — this file only changes its tab bar.
+   Plate colours stay Olympic; green = done/PR, yellow = under, red = over keep their meaning. */
+
+/* ---- dark mode palette ---- */
+html[data-theme=dark]{
+ --midnight:#07080c;--blue:#3d6bff;--orange:#ff7a1a;--orange-ink:#1a0b00;
+ --ink:#f2f4f8;--soft:rgba(242,244,248,.72);
+ --glass:rgba(20,26,42,.55);--glass-hi:rgba(61,107,255,.18);--edge:rgba(130,160,255,.14);--track:rgba(255,255,255,.08);
+ --band:rgba(61,107,255,.28);--cta:var(--orange);--cta-ink:var(--orange-ink);--accent:var(--orange);
+ --shadow:rgba(0,0,0,.7);--scrim:rgba(0,0,0,.6);--sheet:rgba(14,17,25,.97);--paper:#11141d;
+ --solid-card:#11141d;--solid-hi:#1a2033;--spark1:rgba(120,150,255,.35);--spark2:rgba(255,255,255,.12);--spark-op:.3;
+ --bg:radial-gradient(100% 45% at 100% 0%,rgba(61,107,255,.30) 0%,transparent 70%),radial-gradient(80% 35% at 0% 8%,rgba(255,122,26,.10) 0%,transparent 70%),var(--midnight);
+ --bg-flat:#07080c;--under:#f2c230;--dock-bg:color-mix(in srgb,#07080c 82%,transparent);--dock-fade:#07080c
+}
+@media (prefers-color-scheme:dark){html[data-theme=device]{
+ --midnight:#07080c;--blue:#3d6bff;--orange:#ff7a1a;--orange-ink:#1a0b00;
+ --ink:#f2f4f8;--soft:rgba(242,244,248,.72);
+ --glass:rgba(20,26,42,.55);--glass-hi:rgba(61,107,255,.18);--edge:rgba(130,160,255,.14);--track:rgba(255,255,255,.08);
+ --band:rgba(61,107,255,.28);--cta:var(--orange);--cta-ink:var(--orange-ink);--accent:var(--orange);
+ --shadow:rgba(0,0,0,.7);--scrim:rgba(0,0,0,.6);--sheet:rgba(14,17,25,.97);--paper:#11141d;
+ --solid-card:#11141d;--solid-hi:#1a2033;--spark1:rgba(120,150,255,.35);--spark2:rgba(255,255,255,.12);--spark-op:.3;
+ --bg:radial-gradient(100% 45% at 100% 0%,rgba(61,107,255,.30) 0%,transparent 70%),radial-gradient(80% 35% at 0% 8%,rgba(255,122,26,.10) 0%,transparent 70%),var(--midnight);
+ --bg-flat:#07080c;--under:#f2c230;--dock-bg:color-mix(in srgb,#07080c 82%,transparent);--dock-fade:#07080c
+}}
+html.noglass[data-theme=dark]{--glass:var(--solid-card);--glass-hi:var(--solid-hi)}
+@media (prefers-color-scheme:dark){html.noglass[data-theme=device]{--glass:var(--solid-card);--glass-hi:var(--solid-hi)}}
+
+/* dark: blue 30% (charts, ranges, selected states), orange 10% (main action, + button, active tab, focus words) */
+html[data-theme=dark] .chart path[stroke="var(--ink)"],html[data-theme=dark] .ring circle[stroke="var(--ink)"]{stroke:var(--blue)}
+html[data-theme=dark] .chart path[fill="var(--ink)"]{fill:var(--blue);opacity:.12}
+html[data-theme=dark] .seg button.on,html[data-theme=dark] .ssh.on{color:var(--ink);box-shadow:inset 0 0 0 1px rgba(61,107,255,.35)}
+html[data-theme=dark] .chip.on,html[data-theme=dark] .chipz button.on,html[data-theme=dark] .tgrid button.on{background:var(--blue);color:#fff;border-color:transparent}
+html[data-theme=dark] .tgrid button.on small{color:#fff}
+html[data-theme=dark] .sets2 .cur{border-color:var(--blue)}
+html[data-theme=dark] .mk.cur{border-color:var(--blue)}
+html[data-theme=dark] .mk.cur:after{background:var(--blue)}
+html[data-theme=dark] .days em.t,html[data-theme=dark] .heat .t{border-color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue)}
+html[data-theme=dark] .focus h4 i{color:var(--orange)}
+html[data-theme=dark] .tab button.on{color:var(--orange)}
+html[data-theme=dark] .btn,html[data-theme=dark] .logb{background:var(--orange);color:var(--orange-ink)}
+html[data-theme=dark] .fab{background:var(--orange);color:var(--orange-ink);box-shadow:0 10px 24px -10px rgba(255,122,26,.6)}
+html[data-theme=dark] .logb{box-shadow:0 10px 26px -12px rgba(255,122,26,.65)}
+html[data-theme=dark] .logb.ok{background:linear-gradient(90deg,var(--ok) 50%,var(--orange) 50%) 100% 0/200% 100% no-repeat}
+html[data-theme=dark] #toast{background:var(--ink);color:var(--bg-flat)}
+html[data-theme=dark] #toast button{background:color-mix(in srgb,var(--bg-flat) 14%,transparent)}
+@media (prefers-color-scheme:dark){
+html[data-theme=device] .chart path[stroke="var(--ink)"],html[data-theme=device] .ring circle[stroke="var(--ink)"]{stroke:var(--blue)}
+html[data-theme=device] .chart path[fill="var(--ink)"]{fill:var(--blue);opacity:.12}
+html[data-theme=device] .seg button.on,html[data-theme=device] .ssh.on{color:var(--ink);box-shadow:inset 0 0 0 1px rgba(61,107,255,.35)}
+html[data-theme=device] .chip.on,html[data-theme=device] .chipz button.on,html[data-theme=device] .tgrid button.on{background:var(--blue);color:#fff;border-color:transparent}
+html[data-theme=device] .tgrid button.on small{color:#fff}
+html[data-theme=device] .sets2 .cur{border-color:var(--blue)}
+html[data-theme=device] .mk.cur{border-color:var(--blue)}
+html[data-theme=device] .mk.cur:after{background:var(--blue)}
+html[data-theme=device] .days em.t,html[data-theme=device] .heat .t{border-color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue)}
+html[data-theme=device] .focus h4 i{color:var(--orange)}
+html[data-theme=device] .tab button.on{color:var(--orange)}
+html[data-theme=device] .btn,html[data-theme=device] .logb{background:var(--orange);color:var(--orange-ink)}
+html[data-theme=device] .fab{background:var(--orange);color:var(--orange-ink);box-shadow:0 10px 24px -10px rgba(255,122,26,.6)}
+html[data-theme=device] .logb{box-shadow:0 10px 26px -12px rgba(255,122,26,.65)}
+html[data-theme=device] .logb.ok{background:linear-gradient(90deg,var(--ok) 50%,var(--orange) 50%) 100% 0/200% 100% no-repeat}
+html[data-theme=device] #toast{background:var(--ink);color:var(--bg-flat)}
+html[data-theme=device] #toast button{background:color-mix(in srgb,var(--bg-flat) 14%,transparent)}
+}
+
+/* ---- both modes: tab bar you can read over any content ---- */
+:root{--dock-bg:rgba(255,255,255,.8);--dock-fade:#9dbfe8}
+.tab,.restb{background:var(--dock-bg);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);border-color:var(--edge);box-shadow:0 12px 30px -12px var(--shadow)}
+.tab button.on{background:var(--glass-hi)}
+#dock:before{content:"";position:absolute;left:0;right:0;bottom:calc(-18px - env(safe-area-inset-bottom));height:calc(env(safe-area-inset-bottom) + 118px);background:linear-gradient(to bottom,transparent 0%,color-mix(in srgb,var(--dock-fade) 85%,transparent) 45%,var(--dock-fade) 80%);pointer-events:none;z-index:-1}
+#dock .in{position:relative}
+#view{padding-bottom:calc(env(safe-area-inset-bottom) + 140px)}
+/* labels never collide, even with large phone text */
+.tab button{min-width:58px;width:auto;flex:1 1 0;padding:0 6px;white-space:nowrap}
+.tab{flex:1 1 auto;margin-right:10px;max-width:300px}
