@@ -158,6 +158,9 @@ function logScreen(s, it, e, i) {
   if (!done) { const grp = groupOf(s, it); if (grp.length > 1) { const pos = grp.indexOf(it), nx = grp.slice(pos + 1).find(x => curIdx(x) >= 0); h += `<div class="capx" style="margin-top:8px">${nx ? `Then straight to ${groupLabels(s)[nx.uid]}, ${esc(D.ex(nx.exId).name)}. No rest in between.` : `Rest ${mmss(restFor(e, c))} starts after this set.`}</div>`; } }
   h += tiles(s, it, e, i);
   if (!done) h += `<button class="mapl" data-act="setNote" style="font-weight:700;color:var(--soft)">${c.note ? `${ic('note', 'xs')} ${esc(c.note)}` : 'Add a note to this set'}</button>`;
+  /* always-visible way to add a movement mid-workout (owner request, 2026-11-09) */
+  const dupAll = done && !(it.sets.filter(x => x.done && x.type !== 'warmup').length && ['barbell', 'rack', 'machine'].includes(e.logType) && !e.distance);
+  h += `<div class="exrow"><button class="btn2" data-act="library" data-m="add">${ic('plus', 'sm')}Add exercise</button>${dupAll ? '' : `<button class="btn2" data-act="overview">${ic('more', 'sm')}All exercises · ${s.items.length}</button>`}</div>`;
   return h;
 }
 function logButton(s, it, e, c) {

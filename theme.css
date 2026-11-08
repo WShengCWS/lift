@@ -75,3 +75,21 @@ html[data-theme=device] #toast button{background:color-mix(in srgb,var(--bg-flat
 /* labels never collide, even with large phone text */
 .tab button{min-width:58px;width:auto;flex:1 1 0;padding:0 6px;white-space:nowrap}
 .tab{flex:1 1 auto;margin-right:10px;max-width:300px}
+
+/* ---- small phones: dock always fits, steppers never cover their numbers ---- */
+#dock .in{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left))}
+.tab{max-width:none;margin-right:0;min-width:0}
+.tab button{min-width:0;flex:1 1 0;padding:0 2px;overflow:hidden;text-overflow:ellipsis}
+.tab .ic{width:22px;height:22px}
+.fab,.restb{width:clamp(52px,15vw,64px);height:clamp(52px,15vw,64px)}
+@media (max-width:370px){.tab button{font-size:9.5px;height:48px}.restb small{font-size:8px}}
+:where(*):has(> .st){container-type:inline-size}
+/* when the pair of steppers is narrow, both stack the same way: number on top, − + underneath */
+@container (max-width:400px){
+ .st{flex-direction:column;align-items:stretch;gap:6px}
+ .st>div:first-child{min-width:auto!important}
+ .st .pm{justify-content:flex-end}
+}
+/* add-exercise row on the Log screen */
+.exrow{display:flex;gap:8px;margin-top:12px}
+.exrow .btn2{flex:1;height:48px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
