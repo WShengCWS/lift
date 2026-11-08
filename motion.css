@@ -1,0 +1,100 @@
+/* LIFT motion. Loaded after unslop.css. Numbers in comments refer to the 20 motion rules.
+   Everything here is switched off by prefers-reduced-motion (bottom of file). */
+:root{
+ --ease-out:cubic-bezier(.23,1,.32,1);      /* 1 · entrances */
+ --ease-in:cubic-bezier(.55,0,1,.45);       /* exits */
+ --ease-in-out:cubic-bezier(.65,0,.35,1);   /* 9 · moves on screen */
+ --t-press:120ms;
+ --t-pop:200ms;  --t-pop-out:160ms;         /* 2 · small popovers 150–250ms; 15 · exits 20% shorter */
+ --t-sheet:300ms;--t-sheet-out:240ms;
+ --t-move:280ms;
+ --stagger:30ms                             /* 3 */
+}
+
+/* 4 · press: everything scales to .97, quickly, from where it is */
+button,.btn,.btn2,.logb,.chip,.rb,.fab,.restb,.pm button,.repsc button,.seg button,.tab button,.hint,.pillx,.alt button,.tgrid button,.mapo button,.chipz button,.sets2 button{transition:transform var(--t-press) var(--ease-out)}
+button:active,.btn:active,.btn2:active,.logb:active,.pm button:active,.repsc button:active{transform:scale(.97)}
+.strip button{transition:transform .25s var(--ease-out),opacity .25s,filter .25s}
+.strip button:active{transform:scale(.8)}.strip button.on:active{transform:scale(1.12)}
+.grab:active{transform:none}
+
+/* 1 + 3 + 6 · a new screen rises in: header first, then each block, list rows 30ms apart */
+#view.enter>*{animation:rise 260ms var(--ease-out) both;animation-delay:calc(var(--i,0) * 40ms)}
+#view.enter .list>.row,#view.enter .list>button.row,#view.enter .m{animation:rise 240ms var(--ease-out) both;animation-delay:calc(var(--d,0ms) + var(--r,0) * var(--stagger))}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+
+/* 16 · old and new screens overlap: the old one fades out quickly while the new one rises */
+::view-transition-old(root){animation:fadeout 150ms var(--ease-in) both}
+::view-transition-new(root){animation:none}
+#dock{view-transition-name:dock}
+::view-transition-group(dock),::view-transition-old(dock),::view-transition-new(dock){animation:none}
+@keyframes fadeout{to{opacity:0}}
+
+/* 17 · charts reveal through a mask, left to right */
+#view.enter .chart{animation:wipeIn 600ms var(--ease-out) both;animation-delay:120ms}
+@keyframes wipeIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+/* 10 + 11 + 12 + 15 · sheets start at .95 from the button that opened them, and leave back towards it, 20% faster */
+.sheet{animation:none;transform-origin:var(--ox,50%) 100%}
+.scrim{animation:none}
+.sheet.enter{animation:sheetIn var(--t-sheet) var(--ease-out) both}
+.scrim.enter{animation:fadein var(--t-sheet) var(--ease-out) both}
+.sheet.leave{animation:sheetOut var(--t-sheet-out) var(--ease-in) both}
+.scrim.leave{animation:fadeout var(--t-sheet-out) var(--ease-in) both}
+#layer.leaving{pointer-events:none}
+@keyframes sheetIn{from{opacity:0;transform:translateY(40px) scale(.95)}}
+@keyframes sheetOut{to{opacity:0;transform:translateY(48px) scale(.95)}}
+@keyframes fadein{from{opacity:0}}
+/* 14 · while the handle is held the sheet follows the finger exactly; it only tweens after release */
+.sheet.settle{transition:transform 200ms var(--ease-out)}
+
+/* 10 + 11 + 12 + 15 · toast grows from the dock at .95 and drops back into it */
+#toast{display:flex;visibility:hidden;opacity:0;pointer-events:none;transform:translate(-50%,8px) scale(.95);transform-origin:50% 100%;
+ transition:opacity var(--t-pop-out) var(--ease-in),transform var(--t-pop-out) var(--ease-in),visibility 0s linear var(--t-pop-out)}
+#toast.show{visibility:visible;opacity:1;pointer-events:auto;transform:translate(-50%,0);animation:none;
+ transition:opacity var(--t-pop) var(--ease-out),transform var(--t-pop) var(--ease-out),visibility 0s}
+
+/* 5 + 9 + 20 · one moving pill per group: it slides between options (ease-in-out) and stretches 12% mid-move */
+.tab,.seg,.chips,.chipz{position:relative}
+.tab>button,.seg>button,.chips>.chip,.chipz>button{position:relative;z-index:1}
+.pill-ghost{position:absolute;z-index:0;pointer-events:none;will-change:transform,width}
+.flip-hide{background:transparent!important;box-shadow:none!important}
+.chips .flip-hide,.chipz .flip-hide{border-color:transparent!important}
+/* 5 · switch knob stretches as it travels */
+.tog:after{transition:left 220ms var(--ease-in-out),width 220ms var(--ease-in-out)}
+.tog.moving:after{animation:knob 220ms var(--ease-in-out)}
+@keyframes knob{50%{width:25px}}
+
+/* 7 + 8 · logging a set: a dot arcs from the button to the new done set, which pulses once */
+.arc-dot{position:fixed;left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--ok);z-index:70;pointer-events:none}
+.sets2 .pulse,.pulse{animation:pulse 420ms var(--ease-in-out)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent);transform:none}40%{transform:scale(1.05)}100%{box-shadow:0 0 0 12px transparent;transform:none}}
+
+/* 17 · the Log set button fills green through a mask, then returns to ink */
+.logb.ok{background:linear-gradient(90deg,var(--ok) 50%,var(--cta) 50%) 100% 0/200% 100% no-repeat;animation:fillOk 650ms var(--ease-out)}
+@keyframes fillOk{0%{background-position:100% 0}40%{background-position:0 0}70%{background-position:0 0}100%{background-position:-100% 0}}
+
+/* 18 · swapped icons crossfade with a little blur */
+.swap-in{animation:swapIn 220ms var(--ease-out) both}
+.swap-out{position:absolute!important;animation:swapOut 180ms var(--ease-in) both;pointer-events:none}
+@keyframes swapIn{from{opacity:0;filter:blur(4px);transform:scale(.85)}}
+@keyframes swapOut{to{opacity:0;filter:blur(4px);transform:scale(.85)}}
+
+/* 19 · rubber band: pushing past a limit moves the number a little, then it eases back (no bounce) */
+.rubber-l{animation:rubberL 260ms var(--ease-out)}.rubber-r{animation:rubberR 260ms var(--ease-out)}
+@keyframes rubberL{30%{transform:translateX(-5px)}}@keyframes rubberR{30%{transform:translateX(5px)}}
+/* stepper value nudges on a single tap; 14 · not while held */
+.bump{animation:bump 160ms var(--ease-out)}
+html.holding .bump{animation:none}
+@keyframes bump{from{transform:translateY(-3px);opacity:.6}}
+
+/* 13 · no bounce anywhere: every curve above stays inside 0–1 */
+
+@media (prefers-reduced-motion:reduce){
+ *,*:before,*:after,::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important;transition:none!important}
+ #toast{transform:translate(-50%,0)}
+}
+
+/* filter chips fill in place (a sliding dark pill would hide their labels) */
+.chip-in{animation:chipIn 220ms var(--ease-out)}
+@keyframes chipIn{from{background:var(--glass-hi);color:var(--ink);transform:scale(.97)}}
