@@ -63,8 +63,8 @@ function flipToggle() {
   if (!togPrev || calm()) return;
   const t = document.querySelector(`.tog[data-k="${togPrev.k}"]`); const was = togPrev.on; togPrev = null;
   if (!t || (t.getAttribute('aria-checked') === 'true') === was) return;
-  const a = was ? 21 : 3, b = was ? 3 : 21;
-  try { t.animate([{left: a + 'px', width: '22px'}, {left: Math.min(a, b) + 'px', width: '25px', offset: 0.5}, {left: b + 'px', width: '22px'}],
+  const a = was ? 18 : 0, b = was ? 0 : 18;
+  try { t.animate([{transform: `translateX(${a}px)`}, {transform: `translateX(${(a + b) / 2}px) scaleX(1.12)`, offset: 0.5}, {transform: `translateX(${b}px)`}],
     {duration: 220, easing: 'cubic-bezier(.65,0,.35,1)', pseudoElement: '::after'}); } catch (e) {}
 }
 

@@ -275,12 +275,12 @@ function cardioFields(e) { return CARDIO[e.variant] || {fields: ['time', 'distan
 function cardioDerived(e, s, bw = 72) {
   const min = (+s.sec || 0) / 60, km = (+s.m || 0) / 1000, out = [];
   const d = cardioFields(e).derived;
-  if (d === 'pace' && km && min) out.push(['PACE /KM', mmss(min * 60 / km)], ['KM/H', fmt(+(km / (min / 60)).toFixed(1))]);
-  if (d === 'speed' && km && min) out.push(['KM/H', fmt(+(km / (min / 60)).toFixed(1))], ['PACE /KM', mmss(min * 60 / km)]);
-  if (d === 'split500' && s.m && min) out.push(['SPLIT /500 M', mmss(min * 60 / (s.m / 500))], ['M/MIN', String(Math.round(s.m / min))]);
-  if (d === 'floorsPerMin' && s.floors && min) out.push(['FLOORS /MIN', fmt(+(s.floors / min).toFixed(1))]);
-  if (d === 'calPerMin' && s.cal && min) out.push(['CAL /MIN', fmt(+(s.cal / min).toFixed(1))]);
-  if (d === 'jumpsPerMin' && s.jumps && min) out.push(['JUMPS /MIN', String(Math.round(s.jumps / min))]);
+  if (d === 'pace' && km && min) out.push(['Pace /km', mmss(min * 60 / km)], ['km/h', fmt(+(km / (min / 60)).toFixed(1))]);
+  if (d === 'speed' && km && min) out.push(['km/h', fmt(+(km / (min / 60)).toFixed(1))], ['Pace /km', mmss(min * 60 / km)]);
+  if (d === 'split500' && s.m && min) out.push(['Split /500 m', mmss(min * 60 / (s.m / 500))], ['m/min', String(Math.round(s.m / min))]);
+  if (d === 'floorsPerMin' && s.floors && min) out.push(['Floors /min', fmt(+(s.floors / min).toFixed(1))]);
+  if (d === 'calPerMin' && s.cal && min) out.push(['cal /min', fmt(+(s.cal / min).toFixed(1))]);
+  if (d === 'jumpsPerMin' && s.jumps && min) out.push(['Jumps /min', String(Math.round(s.jumps / min))]);
   const kcal = e.variant === 'airbike' ? (+s.cal || 0) : Math.round(min * (KCAL_PER_MIN[e.variant] || 8) * bw / 72);
   return {pairs: out, kcal};
 }
@@ -415,7 +415,7 @@ function convertOldImport(plan, uid) {
           if (!min && km && pace) min = km * pace;
           o.sec = Math.round(min * 60); o.m = Math.round(km * 1000);
           if (pace && ['stairs', 'airbike'].includes(e.variant)) o.level = pace;
-          else if (pace && num(s.duration)) o.note = [o.note, `old pace box: ${String(s.pace).slice(0, 10)}`].filter(Boolean).join(' · ');
+          else if (pace && num(s.duration)) o.note = [o.note, `old pace box: ${String(s.pace).slice(0, 10)}`].filter(Boolean).join(', ');
         }
         else if (e.logType === 'timed') { o.sec = num(s.duration) ? Math.round(num(s.duration) * 60) : num(s.reps); o.add = kg(s.weight); }
         else if (e.logType === 'bodyweight') { if (e.unilateral) { o.l = num(s.lReps) || num(s.reps); o.r = num(s.rReps) || num(s.reps); } else o.reps = num(s.reps) || Math.max(num(s.lReps), num(s.rReps)); o.add = kg(s.weight); o.bw = bw || 0; o.mode = o.add ? 'added' : 'plain'; }
