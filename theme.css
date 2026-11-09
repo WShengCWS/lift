@@ -91,7 +91,8 @@ html[data-theme=device] #toast button{background:color-mix(in srgb,var(--bg-flat
 
 /* ---- Hallmark polish (2026-11-09) ---- */
 /* every control shows keyboard focus (all:unset on buttons had removed it) */
-*:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+/* :is() lifts specificity above the `all:unset` component rules (e.g. `.tab button`) that otherwise wipe the ring */
+html :is(button,a,input,textarea,select,summary,[tabindex]):focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
 html,body{overflow-x:clip}
 /* readable text on the overdue rest bubble in dark mode */
 html[data-theme=dark]{--on-over:#1a0306}
