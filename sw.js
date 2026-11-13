@@ -1,7 +1,7 @@
 /* LIFT service worker: a real file (the old app built it from a blob: URL, which browsers reject).
    Serves the app shell from cache so LIFT opens with no signal; refreshes the cache in the background.
    Bump VERSION whenever any shell file changes. */
-const VERSION = 'lift-2.7.0-1';
+const VERSION = 'lift-2.7.1-1';
 const SHELL = [
   './', 'index.html', 'app.css', 'unslop.css', 'motion.css', 'theme.css', 'manifest.webmanifest',
   'js/i18n.js', 'data/exercises.js', 'js/lift.js', 'js/store.js', 'js/ui-core.js', 'js/ui-log.js', 'js/ui-views.js', 'js/unslop.js', 'js/motion.js',
@@ -21,7 +21,11 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;
   /* later: /api/* (Cloudflare sync) always goes to the network */
   if (url.pathname.includes('/api/')) return;
+  /* only the app's own page is answered with the cached shell; opening any other file from the site
+     (a screenshot, the font licence) goes straight to the network and is never stored as the page */
+  const base = new URL('./', self.location).pathname;
   const isPage = req.mode === 'navigate';
+  if (isPage && url.pathname !== base && url.pathname !== base + 'index.html') return;
   e.respondWith(caches.open(VERSION).then(async cache => {
     const key = isPage ? 'index.html' : req;
     const hit = await cache.match(key, {ignoreSearch: isPage});
