@@ -5,7 +5,7 @@
 **A personal training log, fast between sets.**
 
 Log a set in one tap, see the plates on the bar, and find out whether you're getting stronger.
-Works offline, installs on your phone and keeps your data on your device.
+Works offline, installs on your phone and keeps your data on your device. In English or Simplified Chinese (简体中文).
 
 <img src="docs/screenshots/banner.webp" alt="LIFT on a phone: the Home screen, the Log screen in dark and light, and the Progress chart" width="100%">
 
@@ -16,22 +16,27 @@ Works offline, installs on your phone and keeps your data on your device.
 **Logging**
 - One-tap **Log set** with last time's numbers filled in, and a nudge to try the next step up
 - The working weight drawn as **plates on the bar, per side**, rebuilt live as you change it
+- Swipe the weight in your machine's own steps (learned from your history), or tap the big number to type any weight
 - Seven log types: barbell, rack (dumbbells, kettlebells, plates), machine, bodyweight (plain, added or assisted), band, timed holds and cardio
-- Warm-up, working, drop and failure sets; supersets; notes on a set or pinned to an exercise
-- A **rest timer** that rings and vibrates, keeps the screen awake and still knows the time if you switch apps
+- Warm-up sets on their own row above working sets, a + to add a set at any time, press and hold to remove one, Undo after logging
+- Drop and failure sets; supersets; notes on a set or pinned to an exercise; swipe left or right to change exercise
+- A **rest timer** that rings and vibrates, keeps the screen awake and still knows the time if you switch apps. When rest is over, a full-screen alarm: slide to lift, or snooze +30 s
 
 **Progress**
 - Personal records flagged as you lift
 - Charts per exercise for max weight, volume, estimated 1RM and reps, with a best-reps-per-weight table
-- Weekly sets per muscle against MEV / MRV target ranges, plus streaks and a 12-week training calendar
-- A 1RM calculator (Epley or Brzycki) and weekly bodyweight weigh-ins
+- Weekly sets per muscle against MEV / MRV target ranges, push/pull and upper/lower balance, and streaks
+- Trends over 12 weeks: volume, sessions against your target, top lifts' estimated 1RM, time trained and PRs per month
+- A training calendar (12 weeks or month by month): tap a day to see what you did
+- A 1RM calculator (Epley or Brzycki) and weekly bodyweight weigh-ins, charted in Progress
 
 **Your data**
 - Everything is stored on the device; nothing is sent anywhere
 - One-file backup export and import, including import from the older LIFT 5
-- Templates, custom exercises, your own bar and plate set, weight steps and dumbbell range
+- Templates, custom exercises (filed under the main muscle groups), favourites with quick start, your own bar and plate set, weight steps and dumbbell range
 
 **Comfort**
+- English or Simplified Chinese (Settings › Appearance › Language); names you type stay as typed
 - Light, dark or follow-the-phone theme; a "reduce glass" option and a larger text size
 - 56px main buttons for one-handed use mid-set; full keyboard focus rings; animations turn off with Reduce motion
 
@@ -80,6 +85,7 @@ After changing any file, bump `VERSION` in `sw.js` so installed copies pick up t
 | File | Role |
 | --- | --- |
 | `index.html` | The page shell and the icon set |
+| `js/i18n.js` | Simplified Chinese: translates the screen as it renders |
 | `app.css` | Base styles and design tokens |
 | `unslop.css`, `motion.css`, `theme.css` | Design polish, motion, and the dark palette (Midnight Black, Electric Blue, Sunset Orange) |
 | `js/store.js` | All storage (localStorage, `lift2_` keys) |
