@@ -27,6 +27,11 @@ const D = {
   ex(id) {
     if (this._ex.has(id)) return this._ex.get(id);
     const e = L.resolveExercise(id, Store.all('exercises'), Store.all('exprefs')) || {id, name: 'Unknown exercise', logType: 'barbell', variant: 'olympic', primary: 'core', secondary: [], rest: 120, missing: true};
+    /* a weight stack with no step chosen yet: learn it from what was logged (cables at 6.25, 8.75 mean 2.5 kg steps) */
+    if (e.logType === 'machine' && e.variant !== 'plates' && e.step == null) {
+      const ws = []; for (const w of this.workouts()) for (const it of w.items) if (it.exId === id) for (const x of it.sets) if (x.done && x.kg) ws.push(+x.kg);
+      const inf = L.inferStep(ws); if (inf && inf < 5) { e.step = inf; e.stepLearned = true; }
+    }
     this._ex.set(id, e); return e;
   },
   library() { const c = Store.all('exercises').filter(e => !e.hidden); return c.map(e => this.ex(e.id)).concat(L.EX.map(e => this.ex(e.id))); },
@@ -217,7 +222,7 @@ function bindStrips(root) {
 
 /* ---------- small components ---------- */
 const stepper = (lbl, val, key, ds = '') => `<div class="card st"><div style="min-width:0"><small>${lbl}</small><b>${val}</b></div><div class="pm"><button data-step="${key}" data-dir="-1" ${ds} aria-label="Less ${lbl.toLowerCase()}">−</button><button data-step="${key}" data-dir="1" ${ds} aria-label="More ${lbl.toLowerCase()}">+</button></div></div>`;
-const sr = (t, right, sub = '', attrs = '') => attrs ? `<button class="row" ${attrs}><div class="grow"><b class="t14">${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${right}</button>` : `<div class="row"><div class="grow"><b class="t14">${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${right}</div>`;
+const sr = (t, right, sub = '', attrs = '') => { right = right.replace(/(class="tog"[^>]*aria-label=")([^"]*)(")/, (m, a, l, b) => /^[a-z]\w*$/.test(l) ? a + esc(String(t).replace(/<[^>]+>/g, '')) + b : m); return attrs ? `<button class="row" ${attrs}><div class="grow"><b class="t14">${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${right}</button>` : `<div class="row"><div class="grow"><b class="t14">${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${right}</div>`; };
 const valc = v => `<span class="val">${v}${ic('chev', 'sm')}</span>`;
 const tog = (key, on, label) => `<button class="tog" role="switch" aria-checked="${!!on}" aria-label="${esc(label || key)}" data-act="toggle" data-k="${key}"></button>`;
 const segb = (act, opts, cur, extra = '') => `<div class="seg ${extra}" role="radiogroup">${opts.map(([v, l, dis]) => `<button role="radio" aria-checked="${String(v) === String(cur)}" class="${String(v) === String(cur) ? 'on' : ''}" data-act="${act}" data-v="${esc(v)}" ${dis ? 'disabled' : ''}>${l}</button>`).join('')}</div>`;

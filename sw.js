@@ -1,10 +1,10 @@
 /* LIFT service worker: a real file (the old app built it from a blob: URL, which browsers reject).
    Serves the app shell from cache so LIFT opens with no signal; refreshes the cache in the background.
    Bump VERSION whenever any shell file changes. */
-const VERSION = 'lift-2.4.1-1';
+const VERSION = 'lift-2.7.0-1';
 const SHELL = [
   './', 'index.html', 'app.css', 'unslop.css', 'motion.css', 'theme.css', 'manifest.webmanifest',
-  'data/exercises.js', 'js/lift.js', 'js/store.js', 'js/ui-core.js', 'js/ui-log.js', 'js/ui-views.js', 'js/unslop.js', 'js/motion.js',
+  'js/i18n.js', 'data/exercises.js', 'js/lift.js', 'js/store.js', 'js/ui-core.js', 'js/ui-log.js', 'js/ui-views.js', 'js/unslop.js', 'js/motion.js',
   'fonts/manrope.woff2', 'fonts/instrument-serif.woff2', 'fonts/instrument-serif-italic.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
 ];

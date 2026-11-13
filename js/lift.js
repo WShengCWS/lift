@@ -16,7 +16,7 @@ const RANGES = {chest:[10,20],back:[10,20],shoulders:[8,20],biceps:[8,20],tricep
 
 function defaultSettings() {
   return {
-    name: '', theme: 'device', reduceGlass: false, textSize: 'default',
+    name: '', lang: 'en', theme: 'device', reduceGlass: false, textSize: 'default',
     unit: 'kg', bw: 72, bar: 20,
     steps: {barbell: 2.5, dumbbell: 2, stack: 5, addon: 2.5, machine: 5, bw: 2.5, round: 0.5},
     micro: false,
@@ -101,13 +101,21 @@ function resolveExercise(id, custom = [], prefs = []) {
   e.note = p.note || base.note || '';
   e.seat = p.seat || '';
   e.machineId = p.machineId || base.machineId || '';
+  e.step = p.step != null ? +p.step : (base.step != null ? +base.step : null); /* this machine's own weight step */
   e.warm = p.warm || base.warm || '';
+  e.fav = !!p.fav; /* favourites come first wherever an exercise is picked */
   return e;
 }
 const TYPE_LABEL = {barbell:'Barbell',rack:'Rack',machine:'Machine',bodyweight:'Bodyweight',band:'Band',timed:'Timed',cardio:'Cardio'};
 const VARIANT_LABEL = {olympic:'Olympic bar',ez:'EZ bar',trap:'Trap bar',smith:'Smith',dumbbell:'Dumbbells',kettlebell:'Kettlebells',plate:'Plate',stack:'Weight stack',plates:'Plate-loaded',run:'Run',walk:'Walk',bike:'Bike',row:'Row',ski:'SkiErg',stairs:'StairMaster',elliptical:'Elliptical',airbike:'Air bike',rope:'Jump rope'};
 
 /* ---------- equipment ---------- */
+function inferStep(weights) {
+  const w = [...new Set(weights.filter(v => v > 0).map(v => +(+v).toFixed(2)))];
+  if (w.length < 2) return null;
+  const base = Math.min(...w);
+  return [5, 2.5, 1.25, 1].find(st => w.every(v => Math.abs((v - base) / st - Math.round((v - base) / st)) < 1e-6)) || null; /* no clean pattern: keep the default */
+}
 function plateSet(st) { return ALL_PLATES.filter(k => st.plates[k] && (st.micro || k >= 1)); }
 function splitPlates(perSide, plates) {
   let r = +perSide.toFixed(2); const out = [];
@@ -135,7 +143,7 @@ function stepFor(e, st) {
   switch (e.logType) {
     case 'barbell': return st.steps.barbell;
     case 'rack': return e.variant === 'dumbbell' ? st.steps.dumbbell : st.steps.barbell;
-    case 'machine': { const m = machineFor(e, st); return (m && m.step) || (e.variant === 'stack' ? st.steps.stack : st.steps.machine); }
+    case 'machine': { if (e.step) return e.step; const m = machineFor(e, st); return (m && m.step) || (e.variant === 'stack' ? st.steps.stack : st.steps.machine); }
     case 'bodyweight': case 'timed': return st.steps.bw;
     default: return 1;
   }
@@ -239,7 +247,8 @@ const PR_LABEL = {weight: 'heaviest weight', reps: 'most reps at this weight', v
 function workoutSummary(w, exOf) {
   let sets = 0, vol = 0;
   for (const it of w.items || []) { const e = exOf(it.exId); for (const s of it.sets || []) if (isReal(s)) { sets++; vol += setVolume(s, e); } }
-  const min = w.end && w.start ? Math.max(1, Math.round((w.end - w.start) / 60000)) : (w.minutes || 0);
+  const raw = w.end && w.start ? Math.max(1, Math.round((w.end - w.start) / 60000)) : (w.minutes || 0);
+  const min = raw > 300 ? 0 : raw; /* over 5 hours means the app was left open (old LIFT 5 timings): unknown, not real */
   return {sets, vol, min};
 }
 function muscleSets(workouts, exOf) {
@@ -393,8 +402,9 @@ function convertOldImport(plan, uid) {
     const o = x.old || {};
     const id = 'c_' + normName(x.name).replace(/ /g, '-').slice(0, 40) + '_' + x.oldId.replace(/[^a-z0-9]/gi, '').slice(-6);
     const muscle = MUSCLES.includes(o.muscle) ? o.muscle : (o.muscle === 'cardio' || x.keepAs.logType === 'cardio' ? 'cardio' : 'core');
+    const needsGroup = !MUSCLES.includes(o.muscle) && o.muscle !== 'cardio' && x.keepAs.logType !== 'cardio'; /* unclear muscle: ask once in the library */
     custom.push({id, name: String(x.name).slice(0, 60), logType: x.keepAs.logType, variant: x.keepAs.variant, primary: muscle,
-      secondary: (o.secondary || []).filter(m => MUSCLES.includes(m) && m !== muscle), unilateral: o.lateral === 'unilateral' || x.lr > 0, distance: false, custom: true, note: x.note || '', fromOld: x.oldId});
+      secondary: (o.secondary || []).filter(m => MUSCLES.includes(m) && m !== muscle), unilateral: o.lateral === 'unilateral' || x.lr > 0, distance: false, custom: true, note: x.note || '', fromOld: x.oldId, needsGroup});
     idFor[x.oldId] = id;
   }
   const exOf = id => resolveExercise(id, custom, prefs);
@@ -461,7 +471,7 @@ function starterTemplates() { return STARTERS.map(t => ({id: t.id, name: t.name,
 
 const api = {EX, CARDIO, PLATE_COLORS, ALL_PLATES, KB_COLORS, MUSCLES, RANGES, TYPE_LABEL, VARIANT_LABEL, PR_LABEL,
   defaultSettings, mergeSettings, fmt, fmtThousands, mmss, localDate, parseDate, addDays, daysBetween, weekStartOf, isoWeek, roundTo, byDate,
-  pairDefault, defaultRest, resolveExercise, plateSet, splitPlates, barFor, machineFor, stepFor, minFor, dumbbellRange, snapWeight,
+  pairDefault, defaultRest, resolveExercise, inferStep, plateSet, splitPlates, barFor, machineFor, stepFor, minFor, dumbbellRange, snapWeight,
   isReal, hasData, setReps, setTotalReps, setWeight, setVolume, e1rm, warmups, dropWeight, computePRs, workoutSummary, muscleSets, weekWorkouts,
   suggestion, cardioFields, cardioDerived, normName, matchOldName, oldToType, planOldImport, convertOldImport, fitEquipment, starterTemplates, OLD_DEFAULTS};
 root.L = api;

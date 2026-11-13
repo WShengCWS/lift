@@ -37,11 +37,11 @@ VIEWS.home = {dock: true, render() {
   const coverTxt = !covered.length ? '' : covered.length === behind.length && behind.length > 1 ? `covers both` : `covers ${covered.map(b => b.m).join(' and ')}`;
   const why = behind.length ? `${behind.map((b, i) => `${i ? b.m : cap(b.m)} ${fmt(b.have)} of ${b.need} sets`).join(', ')}.${coverTxt ? ` ${esc(pick.name)} ${coverTxt}: about ${Math.round(cover)} sets.` : ''}` : `Every muscle has its minimum sets. ${thisW.length} of ${st.weeklyTarget} sessions so far.`;
   const wc = weekCounts(st), sk = streak(st);
-  const days = []; for (let i = 0; i < 7; i++) { const d = L.addDays(wk, i); const did = thisW.some(w => w.date === d); days.push(`<span>${'SMTWTFS'[L.parseDate(d).getDay()]}<em class="${did ? 'y' : d === t ? 't' : ''}"></em></span>`); }
+  const days = []; for (let i = 0; i < 7; i++) { const d = L.addDays(wk, i); const did = thisW.some(w => w.date === d); days.push(`<span>${I18N.wdLetter(L.parseDate(d).getDay())}<em class="${did ? 'y' : d === t ? 't' : ''}"></em></span>`); }
   /* weekly weigh-in: shown until logged (or skipped) this week */
   const wis = D.weighins(), wiThis = wis.filter(x => x.date >= wk).pop(), prevW = wis.filter(x => x.date < wk).pop(), meta = D.meta();
   let wiCard = '';
-  if (wiThis) wiCard = `<div class="card list" style="margin-top:10px"><button class="row" data-act="go" data-v="stats"><span class="addb okm">${ic('check', 'sm')}</span><span class="grow"><b>Bodyweight ${fmt(wiThis.kg.toFixed(1))} kg</b><small>${prevW ? `${signed(+(wiThis.kg - prevW.kg).toFixed(1))} kg vs last week, ` : ''}trend in Stats</small></span>${ic('chev', 'sm')}</button></div>`;
+  if (wiThis) wiCard = `<div class="card list" style="margin-top:10px"><button class="row" data-act="progBw"><span class="addb okm">${ic('check', 'sm')}</span><span class="grow"><b>Bodyweight ${fmt(wiThis.kg.toFixed(1))} kg</b><small>${prevW ? `${signed(+(wiThis.kg - prevW.kg).toFixed(1))} kg vs last week, ` : ''}trend in Progress</small></span>${ic('chev', 'sm')}</button></div>`;
   else if (meta.wiSkip !== wk) { if (WI.bw == null) WI.bw = D.latestBw(); wiCard = weighCard(prevW || wis[wis.length - 1]); }
   /* backup nudge every 7 days */
   const lb = meta.lastBackup || 0, days7 = (Date.now() - lb) / 864e5;
@@ -79,7 +79,7 @@ A.wiLog = () => {
 };
 A.wiSkip = () => { D.setMeta({wiSkip: L.weekStartOf(today(), D.settings().weekStart)}); render(); };
 A.weighSheet = () => { WI.bw = D.latestBw(); openSheet('weighin'); };
-SHEETS.weighin = {title: 'Weigh-in', render() { return `<div class="hd"><h3>Bodyweight</h3><b class="serif" style="font-size:40px" data-wv>${WI.bw.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div><p class="lede">Used for pull-ups, dips and push-ups, and the line in Stats.</p><div class="card vis">${weighStrip(WI.bw)}</div><button class="btn" style="margin-top:14px" data-act="wiLog">${ic('check')}<span data-wl>Log ${WI.bw.toFixed(1)} kg</span></button>`; }};
+SHEETS.weighin = {title: 'Weigh-in', render() { if (WI.bw == null) WI.bw = D.latestBw(); return `<div class="hd"><h3>Bodyweight</h3><b class="serif" style="font-size:40px" data-wv>${WI.bw.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div><p class="lede">Used for pull-ups, dips and push-ups, and the line in Progress.</p><div class="card vis">${weighStrip(WI.bw)}</div><button class="btn" style="margin-top:14px" data-act="wiLog">${ic('check')}<span data-wl>Log ${WI.bw.toFixed(1)} kg</span></button>`; }};
 function slipping(ws, t) {
   const out = [], byT = {};
   ws.slice().reverse().forEach(w => (byT[w.title] = byT[w.title] || []).push(w.date));
@@ -115,7 +115,7 @@ function homeFirst() {
     <button class="btn" style="margin-top:12px" data-act="startTpl" data-id="${esc(P.id)}">${ic('play', 'sm')}Start ${esc(P.name)}</button>` : `<button class="btn" style="margin-top:12px" data-act="startEmpty">${ic('play', 'sm')}Start a workout</button>`}
     <div class="alt"><button data-act="startEmpty">Empty workout</button><button data-act="go" data-v="import1">Import a backup</button></div></div>
     <div class="two"><div class="card mini"><div class="lbl">Streak</div><b class="serif">0 <small>weeks</small></b><div class="dots">${'<i></i>'.repeat(8)}</div></div>
-    <div class="card mini"><div class="lbl">This week</div><b class="serif">0<small> / ${st.weeklyTarget} sessions</small></b><div class="days">${[0, 1, 2, 3, 4, 5, 6].map(i => { const d = L.addDays(wk, i); return `<span>${'SMTWTFS'[L.parseDate(d).getDay()]}<em class="${d === t ? 't' : ''}"></em></span>`; }).join('')}</div></div></div>
+    <div class="card mini"><div class="lbl">This week</div><b class="serif">0<small> / ${st.weeklyTarget} sessions</small></b><div class="days">${[0, 1, 2, 3, 4, 5, 6].map(i => { const d = L.addDays(wk, i); return `<span>${I18N.wdLetter(L.parseDate(d).getDay())}<em class="${d === t ? 't' : ''}"></em></span>`; }).join('')}</div></div></div>
     <div class="sec"><h5>Muscle volume</h5><span>fills in as you log</span></div><div class="card list mv0">${MUSCLE_ORDER.filter(m => st.ranges[m]).map(m => mrow(m, 0, st.ranges[m])).join('')}</div>
     <p class="lede" style="margin:8px 4px 0">The green band is each muscle's weekly target range. Change the ranges in Settings.</p>`;
 }
@@ -204,6 +204,7 @@ const UNIT = {max: 'kg', vol: 'kg', e1rm: 'kg', reps: 'reps', add: 'kg', sec: 's
 VIEWS.progress = {dock: true, render() {
   const ws = D.workouts();
   if (ws.length < 2) return `<div class="hd"><div><p>${ws.length ? '1 workout so far' : 'No workouts yet'}</p><h3 class="pt">Progress</h3></div></div><div class="ghostw"><div class="ghost" aria-hidden="true">${sampleProgress()}</div>${emptyCard('Then each exercise gets its chart: max weight, estimated 1RM, PR markers and your best reps at each weight. Below is a preview.', ws.length)}</div>`;
+  if (PROG.ex === '__bw') return bwProgress();
   if (!PROG.ex || !D.historyOf(PROG.ex).length) {
     const cnt = {}; ws.slice(0, 40).forEach(w => w.items.forEach(it => { const e = exOf(it.exId); if (['barbell', 'rack', 'machine'].includes(e.logType)) cnt[it.exId] = (cnt[it.exId] || 0) + 1; }));
     PROG.ex = Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(x => x[0])[0] || ws[0].items[0].exId;
@@ -253,10 +254,10 @@ VIEWS.stats = {dock: true, render() {
   const ws = D.workouts(), st = D.settings();
   const wk = L.addDays(L.weekStartOf(today(), st.weekStart), -7 * STATS.off), end = L.addDays(wk, 6);
   const range = `${L.parseDate(wk).getDate()}${L.parseDate(wk).getMonth() !== L.parseDate(end).getMonth() ? ' ' + MONL[L.parseDate(wk).getMonth()] : ''} to ${L.parseDate(end).getDate()} ${MONL[L.parseDate(end).getMonth()]}`;
-  if (ws.length < 2) return `<div class="hd"><div><p>${range}, ${ws.length ? '1 workout so far' : 'no workouts yet'}</p><h3 class="pt">Stats</h3></div></div><div class="ghostw"><div class="ghost" aria-hidden="true">${statsTop([], st, true)}</div>${emptyCard('Then you see sessions against your target, sets per muscle against your ranges, the calendar and your bodyweight trend. Below is a preview.', ws.length)}</div>${calcCard(st)}<p class="lede" style="margin:8px 4px 0">The calculator works from day one.</p>`;
+  if (ws.length < 2) return `<div class="hd"><div><p>${range}, ${ws.length ? '1 workout so far' : 'no workouts yet'}</p><h3 class="pt">Stats</h3></div></div><div class="ghostw"><div class="ghost" aria-hidden="true">${statsTop([], st, true)}</div>${emptyCard('Then you see sessions against your target, sets per muscle against your ranges, the calendar and your training trends. Below is a preview.', ws.length)}</div>${calcCard(st)}<p class="lede" style="margin:8px 4px 0">The calculator works from day one.</p>`;
   const thisW = L.weekWorkouts(ws, wk);
   return `<div class="hd"><div><p>${range}</p><h3 class="pt">Stats</h3></div><div class="rbs"><button class="rb" data-act="sweek" data-v="1" aria-label="Previous week">${ic('back', 'sm')}</button><button class="rb" data-act="sweek" data-v="-1" aria-label="Next week" ${STATS.off ? '' : 'disabled style="opacity:.35"'}>${ic('chev', 'sm')}</button></div></div>
-    ${statsTop(thisW, st)}${bwSection(st)}${calendar(ws, st)}${calcCard(st)}`;
+    ${statsTop(thisW, st)}${balance(L.muscleSets(thisW, exOf))}${trends(ws, st)}${calendar(ws, st)}${calcCard(st)}`;
 }};
 function statsTop(thisW, st, sample) {
   const sum = thisW.reduce((a, w) => { const s = L.workoutSummary(w, exOf); a.sets += s.sets; a.vol += s.vol; return a; }, {sets: 0, vol: 0});
@@ -265,21 +266,93 @@ function statsTop(thisW, st, sample) {
   return `<div class="stat3"><div class="card"><div class="lbl">Sessions</div><b class="serif">${n}<small> / ${st.weeklyTarget}</small></b></div><div class="card"><div class="lbl">Sets</div><b class="serif">${sample ? 41 : sum.sets}</b></div><div class="card"><div class="lbl">Volume</div><b class="serif">${sample ? '17.9<small> t</small>' : tons(sum.vol)}</b></div></div>
     <div class="sec"><h5>Muscle volume</h5><button data-act="go" data-v="ranges">edit ranges</button></div><div class="card list">${MUSCLE_ORDER.filter(m => st.ranges[m] || ms[m]).map(m => mrow(m, ms[m] || 0, st.ranges[m])).join('')}</div>`;
 }
-function bwSection(st) {
-  const wi = D.weighins().filter(x => x.date >= L.addDays(today(), -84));
-  const head = `<div class="sec" data-bw><h5>Bodyweight</h5><button data-act="weighSheet">log weigh-in</button></div>`;
-  if (wi.length < 2) return `${head}<div class="card" style="padding:16px"><b class="serif" style="font-size:44px;line-height:1">${fmt(D.latestBw().toFixed(1))}</b> <span style="font-weight:700;color:var(--soft)">kg</span><p class="lede">Log a weigh-in each week; the line starts with the second one. Pull-ups, dips and push-ups use the latest.</p></div>`;
-  const pts = wi.map(x => ({x: L.parseDate(x.date).getTime(), y: x.kg})), l = wi[wi.length - 1], ch = +(l.kg - wi[0].kg).toFixed(1);
-  return `${head}<div class="card" style="padding:16px"><div style="display:flex;align-items:baseline;gap:8px"><b class="serif" style="font-size:52px;line-height:1">${fmt(l.kg.toFixed(1))}</b><span style="font-weight:700;color:var(--soft)">kg</span>${ch ? `<span class="tag w" style="margin-left:auto">${signed(ch)} kg in ${Math.max(1, Math.round((pts[pts.length - 1].x - pts[0].x) / 6048e5))} wk</span>` : ''}</div>${lineChart(pts, {label: `Bodyweight from ${wi[0].kg} to ${l.kg} kg`})}${axisLabels(pts[0].x, pts[pts.length - 1].x)}<p class="lede" style="margin-top:10px">Logged once a week from Home. Pull-ups, dips and push-ups use the latest weigh-in.</p></div>`;
-}
+const CAL = {mode: 'weeks', m: 0};
 function calendar(ws, st) {
-  const t = today(), endWk = L.weekStartOf(t, st.weekStart), start = L.addDays(endWk, -77), by = {};
-  for (const w of ws) if (w.date >= start) by[w.date] = (by[w.date] || 0) + L.workoutSummary(w, exOf).sets;
-  let cells = '';
-  for (let i = 0; i < 84; i++) { const d = L.addDays(start, i), n = by[d] || 0; cells += `<i class="${n >= 12 ? 'b' : n ? 'a' : ''} ${d === t ? 't' : ''} ${d > t ? 'f' : ''}" title="${dShort(d)}${n ? ': ' + n + ' sets' : ''}"></i>`; }
-  const n = Object.keys(by).length;
-  return `<div class="sec"><h5>Training calendar</h5><span>last 12 weeks, ${plural(n, 'day')}</span></div><div class="card" style="padding:14px 16px"><div class="heat" role="img" aria-label="${n} training days in the last 12 weeks">${cells}</div><div style="display:flex;gap:12px;font-size:11px;font-weight:700;color:var(--soft);margin-top:10px"><span>each column is a week</span><span style="margin-left:auto">lighter = under 12 sets</span></div></div>`;
+  const t = today(), by = {};
+  for (const w of ws) by[w.date] = (by[w.date] || 0) + L.workoutSummary(w, exOf).sets;
+  const lvl = n => n >= 12 ? 'b' : n ? 'a' : '';
+  const seg = `<div class="seg" style="width:max-content" role="radiogroup">${[['weeks', '12 weeks'], ['month', 'Month']].map(([k, l]) => `<button class="${CAL.mode === k ? 'on' : ''}" data-act="calMode" data-v="${k}" role="radio" aria-checked="${CAL.mode === k}">${l}</button>`).join('')}</div>`;
+  if (CAL.mode === 'month') {
+    const base = L.parseDate(t); base.setDate(1); base.setMonth(base.getMonth() - CAL.m);
+    const first = L.localDate(base), y = base.getFullYear(), mo = base.getMonth(), days = new Date(y, mo + 1, 0).getDate();
+    const lead = (base.getDay() - st.weekStart + 7) % 7, letters = [0, 1, 2, 3, 4, 5, 6].map(i => I18N.wdLetter((st.weekStart + i) % 7));
+    let cells = letters.map(l => `<span class="wd">${l}</span>`).join('') + '<span></span>'.repeat(lead), n = 0;
+    for (let d = 1; d <= days; d++) { const ds = L.addDays(first, d - 1), k = by[ds] || 0; if (k) n++; cells += `<button class="${lvl(k)} ${ds === t ? 't' : ''} ${ds > t ? 'f' : ''}" data-act="calDay" data-d="${ds}" aria-label="${dLong(ds)}${k ? ', ' + plural(k, 'set') : ', no workout'}">${d}</button>`; }
+    return `<div class="sec"><h5>Training calendar</h5><span>${plural(n, 'training day')}</span></div><div class="card" style="padding:14px 16px"><div class="hd">${seg}<div class="rbs"><button class="rb" data-act="calMonth" data-v="1" aria-label="Previous month">${ic('back', 'sm')}</button><button class="rb" data-act="calMonth" data-v="-1" aria-label="Next month" ${CAL.m ? '' : 'disabled style="opacity:.35"'}>${ic('chev', 'sm')}</button></div></div><div class="lbl" style="margin-top:12px">${MONL[mo]} ${y}</div><div class="mgrid">${cells}</div><p class="lede">Tap a day to see what you did.</p></div>`;
+  }
+  const endWk = L.weekStartOf(t, st.weekStart), start = L.addDays(endWk, -77);
+  let cells = '', n = 0;
+  for (let i = 0; i < 84; i++) { const d = L.addDays(start, i), k = by[d] || 0; if (k && d <= t) n++; cells += `<button class="${lvl(k)} ${d === t ? 't' : ''} ${d > t ? 'f' : ''}" data-act="calDay" data-d="${d}" aria-label="${dLong(d)}${k ? ', ' + plural(k, 'set') : ', no workout'}" ${d > t ? 'disabled' : ''}></button>`; }
+  return `<div class="sec"><h5>Training calendar</h5><span>last 12 weeks, ${plural(n, 'day')}</span></div><div class="card" style="padding:14px 16px">${seg}<div class="heat" style="margin-top:12px">${cells}</div><div style="display:flex;gap:12px;font-size:11px;font-weight:700;color:var(--soft);margin-top:10px"><span>each column is a week; tap a day</span><span style="margin-left:auto">lighter = under 12 sets</span></div></div>`;
 }
+A.calMode = d => { CAL.mode = d.v; render(); };
+A.calMonth = d => { CAL.m = Math.max(0, CAL.m + +d.v); render(); };
+A.calDay = d => openSheet('day', {d: d.d});
+SHEETS.day = {title: 'Day', render(sp) {
+  const ws = D.workouts().filter(w => w.date === sp.d), st = D.settings();
+  const wkOff = Math.round(L.daysBetween(L.weekStartOf(sp.d, st.weekStart), L.weekStartOf(today(), st.weekStart)) / 7);
+  return `<div class="hd"><h3>${esc(dLong(sp.d))}</h3></div>${ws.length ? `<div class="card list" style="margin-top:12px">${ws.map(w => { const x = L.workoutSummary(w, exOf); return `<button class="row" data-act="dayOpen" data-id="${esc(w.id)}">${dateTile(w.date)}<span class="grow"><b>${esc(w.title)}</b><small>${x.min ? x.min + ' min, ' : ''}${plural(x.sets, 'set')}, ${L.fmtThousands(x.vol)} kg</small></span>${ic('chev', 'sm')}</button>`; }).join('')}</div>` : `<p class="lede" style="margin-top:10px">No workout logged on this day.</p>`}
+    <div class="btns" style="margin-top:14px"><button class="btn2" data-act="dayWeek" data-v="${wkOff}">See this week in Stats</button></div>`;
+}};
+A.dayOpen = d => { S.sheet = null; nav('detail', {id: d.id}); };
+A.dayWeek = d => { STATS.off = Math.max(0, +d.v); closeSheet(); setTimeout(() => { render(); window.scrollTo({top: 0, behavior: 'smooth'}); }, 30); };
+
+/* ---------- D16: muscle balance ---------- */
+function balance(ms) {
+  const sum = ks => ks.reduce((a, k) => a + (ms[k] || 0), 0);
+  const rows = [['Push', sum(['chest', 'shoulders', 'triceps']), 'Pull', sum(['back', 'biceps', 'traps'])], ['Upper', sum(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'forearms', 'traps']), 'Lower', sum(['quads', 'hamstrings', 'glutes', 'calves'])]];
+  if (!rows.some(r => r[1] + r[3])) return '';
+  return `<div class="sec"><h5>Balance</h5><span>sets this week</span></div><div class="card list">${rows.map(([a, x, b, y]) => { const tot = x + y || 1, p = x / tot, even = Math.abs(x - y) <= Math.max(2, tot * .2); return `<div class="bal"><span>${a} <b>${fmt(Math.round(x * 2) / 2)}</b></span><div class="baltr" role="img" aria-label="${a} ${fmt(x)}, ${b} ${fmt(y)}"><i style="width:${p * 100}%"></i></div><span><b>${fmt(Math.round(y * 2) / 2)}</b> ${b}</span><small class="${even ? 'okm' : 'unm'}">${even ? 'even' : x > y ? 'more ' + a.toLowerCase() : 'more ' + b.toLowerCase()}</small></div>`; }).join('')}</div>`;
+}
+
+/* ---------- D14: trends instead of bodyweight ---------- */
+const TREND = {k: 'vol'};
+function barChart(vals, {fmtv = v => fmt(v), target = null, label = 'Chart'} = {}) {
+  const W = 310, H = 140, n = vals.length, mx = Math.max(target || 0, ...vals.map(v => v.v), 1), bw = (W - 20) / n;
+  const Y = v => H - 20 - v / mx * (H - 40);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">`;
+  vals.forEach((v, i) => { const x = 10 + i * bw + bw * .18, h = H - 20 - Y(v.v); svg += `<rect x="${x.toFixed(1)}" y="${Y(v.v).toFixed(1)}" width="${(bw * .64).toFixed(1)}" height="${Math.max(h, v.v ? 2 : 0).toFixed(1)}" rx="3" fill="${i === n - 1 ? 'var(--ink)' : 'var(--soft)'}" opacity="${i === n - 1 ? 1 : .45}"/>`; });
+  if (target) svg += `<line x1="6" x2="${W - 6}" y1="${Y(target)}" y2="${Y(target)}" stroke="var(--ok)" stroke-width="2" stroke-dasharray="5 5"/><text x="${W - 6}" y="${Y(target) - 4}" text-anchor="end" font-size="9" font-weight="700" fill="var(--ok)">target ${fmtv(target)}</text>`;
+  const last = vals[n - 1]; svg += `<text x="${10 + (n - 1) * bw + bw / 2}" y="${Y(last.v) - 6}" text-anchor="middle" font-size="10" font-weight="800" fill="var(--ink)">${fmtv(last.v)}</text>`;
+  return svg + `</svg><div class="axis"><span>${esc(vals[0].lbl)}</span><span>${esc(last.lbl)}</span></div>`;
+}
+function topLifts(ws) {
+  const want = ['bench-press', 'back-squat', 'deadlift', 'overhead-press'].filter(id => D.historyOf(id).length);
+  if (want.length < 4) { const cnt = {}; ws.slice(0, 60).forEach(w => w.items.forEach(it => { const e = exOf(it.exId); if (['barbell', 'rack', 'machine'].includes(e.logType) && !want.includes(it.exId)) cnt[it.exId] = (cnt[it.exId] || 0) + 1; })); want.push(...Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, 4 - want.length)); }
+  const cut = Date.now() - 84 * 864e5;
+  return want.map(id => { const all = seriesOf(id, 'e1rm'), pts = all.filter(p => p.x >= cut); const use = pts.length ? pts : all.slice(-1); return {id, e: exOf(id), now: use.length ? use[use.length - 1].y : 0, ch: use.length > 1 ? use[use.length - 1].y - use[0].y : 0}; });
+}
+function trends(ws, st) {
+  const cur = L.weekStartOf(today(), st.weekStart), weeks = [];
+  for (let i = 11; i >= 0; i--) { const wk = L.addDays(cur, -7 * i); weeks.push({wk, w: L.weekWorkouts(ws, wk), lbl: dShort(wk)}); }
+  const chips = `<div class="chips" role="group" aria-label="Trend">${[['vol', 'Volume'], ['sess', 'Sessions'], ['e1rm', 'Top lifts'], ['time', 'Time'], ['prs', 'PRs']].map(([k, l]) => `<button class="chip ${TREND.k === k ? 'on' : ''}" data-act="trend" data-v="${k}" aria-pressed="${TREND.k === k}">${l}</button>`).join('')}</div>`;
+  let body = '';
+  if (TREND.k === 'vol') { const v = weeks.map(x => ({v: x.w.reduce((a, w) => a + L.workoutSummary(w, exOf).vol, 0) / 1000, lbl: x.lbl})), avg = v.slice(0, -1).reduce((a, x) => a + x.v, 0) / 11; body = `<p class="lede">Tonnes lifted per week. Average ${fmt(+avg.toFixed(1))} t before this week.</p>${barChart(v, {fmtv: x => fmt(+x.toFixed(1)) + ' t', label: 'Volume per week'})}`; }
+  if (TREND.k === 'sess') { const v = weeks.map(x => ({v: x.w.length, lbl: x.lbl})), hit = v.filter(x => x.v >= st.weeklyTarget).length; body = `<p class="lede">Sessions per week against your target of ${st.weeklyTarget}. On target ${hit} of 12 weeks.</p>${barChart(v, {target: st.weeklyTarget, label: 'Sessions per week'})}`; }
+  if (TREND.k === 'time') { const mins = weeks.map(x => x.w.reduce((a, w) => a + L.workoutSummary(w, exOf).min, 0)), sess = weeks.reduce((a, x) => a + x.w.filter(w => L.workoutSummary(w, exOf).min).length, 0); body = `<p class="lede">Minutes trained per week. Average session ${sess ? Math.round(mins.reduce((a, b) => a + b, 0) / sess) : 0} min.</p>${barChart(mins.map((v, i) => ({v, lbl: weeks[i].lbl})), {fmtv: x => Math.round(x) + ' min', label: 'Time per week'})}`; }
+  if (TREND.k === 'prs') { const prs = D.prs(), months = []; const d0 = L.parseDate(today()); for (let i = 5; i >= 0; i--) { const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); months.push({key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, lbl: MON[d.getMonth()], v: 0}); }
+    for (const w of ws) { const m = months.find(x => w.date.startsWith(x.key)); if (m) for (const it of w.items) for (const x of it.sets) if (prs.has(x.id)) m.v++; }
+    body = `<p class="lede">Personal records per month, real sets only.</p>${barChart(months, {label: 'PRs per month'})}`; }
+  if (TREND.k === 'e1rm') { const L4 = topLifts(ws); body = L4.length ? `<p class="lede">Estimated 1RM now, and the change over 12 weeks. An estimate, never a PR.</p><div class="list" style="padding:0">${L4.map(x => `<button class="row" data-act="trendLift" data-id="${esc(x.id)}"><span class="grow"><b>${esc(x.e.name)}</b><small>est. 1RM</small></span><b class="serif" style="font-size:30px;font-weight:400">${fmt(L.roundTo(x.now, st.steps.round))}<small style="font-family:var(--font-body);font-size:12px;color:var(--soft)"> kg</small></b>${x.ch ? `<span class="tag ${x.ch > 0 ? '' : 'w'}" style="margin-left:8px">${signed(+x.ch.toFixed(1))}</span>` : ''}</button>`).join('')}</div>` : '<p class="lede">Log a few weighted sets to see your top lifts.</p>'; }
+  return `<div class="sec"><h5>Trends</h5><span>last 12 weeks</span></div><div class="card" style="padding:14px 16px">${chips}${body}</div>`;
+}
+A.trend = d => { TREND.k = d.v; render(); };
+A.trendLift = d => { PROG.ex = d.id; PROG.metric = 'e1rm'; nav('progress'); };
+
+/* ---------- D15: bodyweight lives in Progress ---------- */
+function bwProgress() {
+  const all = D.weighins(), cut = PROG.range === '12w' ? L.addDays(today(), -84) : PROG.range === '6m' ? L.addDays(today(), -183) : '0';
+  let wi = all.filter(x => x.date >= cut); if (wi.length < 2) wi = all;
+  const pts = wi.map(x => ({x: L.parseDate(x.date).getTime(), y: x.kg})), l = wi[wi.length - 1], ch = wi.length > 1 ? +(l.kg - wi[0].kg).toFixed(1) : 0;
+  return `<div class="hd"><div><p>${PROG.range === '12w' ? '12 weeks' : PROG.range === '6m' ? '6 months' : 'All time'}</p><h3 class="pt">Progress</h3></div></div>
+    <button class="card row" style="margin-top:14px;padding:12px 16px;border-bottom:1px solid var(--edge)" data-act="library" data-m="progress"><span class="grow"><b style="font-size:17px">Bodyweight</b></span>${ic('down')}</button>
+    <div class="card" style="margin-top:10px;padding:16px">${l ? `<div style="display:flex;align-items:baseline;gap:8px"><b class="serif" style="font-size:60px;line-height:1">${fmt(l.kg.toFixed(1))}</b><span style="font-weight:700;color:var(--soft)">kg</span>${ch ? `<span class="tag w" style="margin-left:auto">${signed(ch)} kg in ${Math.max(1, Math.round((pts[pts.length - 1].x - pts[0].x) / 6048e5))} wk</span>` : ''}</div>
+    ${pts.length > 1 ? lineChart(pts, {label: `Bodyweight from ${wi[0].kg} to ${l.kg} kg`}) + axisLabels(pts[0].x, pts[pts.length - 1].x) : '<p class="lede">The line starts with your second weekly weigh-in.</p>'}` : '<p class="lede">No weigh-ins yet.</p>'}
+    <p class="lede" style="margin-top:10px">Logged once a week from Home. Pull-ups, dips and push-ups use the latest weigh-in.</p></div>
+    <div class="seg" style="margin-top:10px;width:max-content">${[['12w', '12 wk'], ['6m', '6 mo'], ['all', 'All']].map(([k, lb]) => `<button class="${PROG.range === k ? 'on' : ''}" data-act="prange" data-v="${k}">${lb}</button>`).join('')}</div>
+    <div class="btns" style="margin-top:12px"><button class="btn2" data-act="weighSheet">${ic('scale', 'sm')}Log a weigh-in</button></div>`;
+}
+A.progBw = () => { PROG.ex = '__bw'; PROG.cmp = null; if (S.sheet) { S.sheet = null; } if (S.view === 'progress') { if (history.state && history.state.s) history.back(); setTimeout(render, 30); } else nav('progress'); };
 function calcCard(st) {
   const e1 = L.e1rm(CALC.kg, CALC.reps, st.formula), r = v => fmt(L.roundTo(v, st.steps.round));
   return `<div class="sec"><h5>1RM calculator</h5><span>${st.formula === 'brzycki' ? 'Brzycki' : 'Epley'}</span></div><div class="card" style="padding:14px 16px"><div class="steps" style="margin-top:0">${stepper('Weight', fmt(CALC.kg), 'calc', 'data-f="kg"')}${stepper('Reps', CALC.reps, 'calc', 'data-f="reps"')}</div>
@@ -298,7 +371,7 @@ VIEWS.settings = {dock: false, render() {
   const RW = (icn, t, sub, v, act) => `<button class="row" ${act}><span class="addb">${ic(icn, 'sm')}</span><span class="grow"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${valc(v)}</button>`;
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Settings</h3>
   <div class="sec"><h5>You</h5></div><div class="card list">${RW('scale', 'Bodyweight', 'Weekly weigh-in; used for pull-ups, dips, push-ups', kgs(D.latestBw()), 'data-act="weighSheet"')}${RW('user', 'Name on Home', '', esc(st.name || 'not set'), 'data-act="textSheet" data-k="name"')}</div>
-  <div class="sec"><h5>Appearance</h5></div><div class="card list">${sr('Theme', segb('theme', [['light', `${ic('sun', 'sm')}Light`], ['dark', `${ic('moon', 'sm')}Dark`], ['device', `${ic('phone', 'sm')}Device`]], st.theme))}${sr('Reduce glass', tog('reduceGlass', st.reduceGlass, 'Reduce glass'), 'Solid cards instead of frosted glass. Also turns on by itself when the battery is low.')}${sr('Text size', valc(st.textSize === 'large' ? 'Large' : 'Default'), '', 'data-act="pick" data-k="textSize"')}</div>
+  <div class="sec"><h5>Appearance</h5></div><div class="card list">${sr('Theme', segb('theme', [['light', `${ic('sun', 'sm')}Light`], ['dark', `${ic('moon', 'sm')}Dark`], ['device', `${ic('phone', 'sm')}Device`]], st.theme))}${sr('Reduce glass', tog('reduceGlass', st.reduceGlass, 'Reduce glass'), 'Solid cards instead of frosted glass. Also turns on by itself when the battery is low.')}${sr('Text size', valc(st.textSize === 'large' ? 'Large' : 'Default'), '', 'data-act="pick" data-k="textSize"')}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}</div>
   <div class="sec"><h5>Units and weights</h5></div><div class="card list">${sr('Units', '<span class="val">kg, km</span>', 'lbs and miles come later')}${RW('ruler', 'Weight steps', 'Barbell / dumbbells / stacks', `${fmt(st.steps.barbell)} / ${fmt(st.steps.dumbbell)} / ${fmt(st.steps.stack)}`, 'data-act="go" data-v="steps"')}${RW('bar', 'Equipment', 'Bars, plates, dumbbells, machines, bands', 'Edit', 'data-act="go" data-v="equip"')}</div>
   <div class="sec"><h5>Logging</h5></div><div class="card list">${sr("Fill in last time's numbers", tog('fillLast', st.fillLast))}${sr('Warm-up sets', valc(st.warmups === 'off' ? 'Off' : 'Ask'), 'Shows "Add warm-ups": bar, 50, 70, 85%', 'data-act="pick" data-k="warmups"')}${sr('Drop sets', valc('−' + st.drop + '%'), 'Each drop takes this much off, rounded to the step', 'data-act="pick" data-k="drop"')}${sr('RPE', tog('rpe', st.rpe), 'Rate each set 6 to 10 (optional)')}${sr('PR alerts', tog('prAlerts', st.prAlerts))}${sr('Haptics', tog('haptics', st.haptics), 'Tick on swipe, buzz on Log set')}${sr('Keep screen awake', tog('keepAwake', st.keepAwake), 'During a workout')}</div>
   <div class="sec"><h5>Rest timer</h5></div><div class="card list">${sr('Default rest', valc(mmss(st.rest)), '', 'data-act="pick" data-k="rest"')}${sr('Different rest per exercise', tog('restPerExercise', st.restPerExercise), 'Big lifts 2:30, compounds 2:00, isolation 1:30, bodyweight 1:00')}${sr('Sound', tog('sound', st.sound))}${sr('Vibration', tog('vibrate', st.vibrate))}</div>
@@ -308,6 +381,7 @@ VIEWS.settings = {dock: false, render() {
   <div class="sec"><h5>App</h5></div><div class="card list">${INSTALL && !standalone() ? sr('Install LIFT', ic('install', 'sm'), 'Add to your home screen', 'data-act="install"') : ''}${sr('About', '<span class="val">v2.0</span>', `${L.EX.length} built-in exercises, data stays on this phone`)}</div>`;
 }};
 A.toggle = d => { const st = D.settings(); D.saveSettings({[d.k]: !st[d.k]}); applyTheme(); if (d.k === 'keepAwake') { st.keepAwake ? unwake() : wake(); } render(); };
+A.lang = d => { const was = D.settings().lang; D.saveSettings({lang: d.v}); if (d.v === was) return; if (d.v === 'en') { try { sessionStorage.setItem('lift_view', 'settings'); } catch (e) {} location.reload(); return; } I18N.setLang(d.v); render(); };
 A.theme = d => { D.saveSettings({theme: d.v}); applyTheme(); render(); };
 A.formula = d => { D.saveSettings({formula: d.v}); render(); };
 A.install = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) {} INSTALL = null; render(); };
@@ -471,8 +545,8 @@ let NEWEX = null;
 VIEWS.newex = {dock: false, render(p) {
   if (!NEWEX || NEWEX._for !== (p.id || 'new')) {
     const e = p.id ? exOf(p.id) : null;
-    NEWEX = e ? {_for: p.id, id: e.id, custom: !!e.custom, name: e.name, type: e.logType, variant: e.variant || '', primary: e.primary, sec: (e.secondary || []).slice(), uni: !!e.unilateral, dist: !!e.distance, rest: e.rest, warm: e.warm || 'ask', note: e.note || '', pair: !!e.pair}
-      : {_for: 'new', id: null, custom: true, name: p.name || '', type: 'barbell', variant: 'olympic', primary: 'chest', sec: [], uni: false, dist: false, rest: 120, warm: 'ask', note: '', pair: false};
+    NEWEX = e ? {_for: p.id, id: e.id, custom: !!e.custom, name: e.name, type: e.logType, variant: e.variant || '', primary: e.primary, sec: (e.secondary || []).slice(), uni: !!e.unilateral, dist: !!e.distance, rest: e.rest, warm: e.warm || 'ask', note: e.note || '', pair: !!e.pair, fav: !!e.fav, needsGroup: !!e.needsGroup}
+      : {_for: 'new', id: null, custom: true, name: p.name || '', type: 'barbell', variant: 'olympic', primary: 'chest', sec: [], uni: false, dist: false, rest: 120, warm: 'ask', note: '', pair: false, fav: false};
   }
   const s = NEWEX, T = TYPEINFO.find(t => t[0] === s.type);
   const MUSC = L.MUSCLES.concat(['cardio']);
@@ -483,13 +557,16 @@ VIEWS.newex = {dock: false, render(p) {
   <div class="tgrid">${TYPEINFO.map(([id, n, d]) => `<button data-act="nexF" data-f="type" data-v="${id}" class="${id === s.type ? 'on' : ''}" aria-pressed="${id === s.type}">${ic(TYPEICON[id], 'sm')}<b>${n}</b><small>${d}</small></button>`).join('')}</div>
   ${T[3].length ? `<div class="sec"><h5>${s.type === 'cardio' ? 'Machine' : s.type === 'machine' ? 'Type' : s.type === 'rack' ? 'Rack' : 'Bar'}</h5></div><div class="chipz">${T[3].map(v => `<button data-act="nexF" data-f="variant" data-v="${v}" class="${v === s.variant ? 'on' : ''}">${esc(L.VARIANT_LABEL[v])}</button>`).join('')}</div>` : ''}
   <div class="card prev"><small>The log screen will show</small><b>${T[1]}${s.variant && T[3].length ? ', ' + esc(L.VARIANT_LABEL[s.variant]) : ''}${s.uni && ['barbell', 'rack', 'machine', 'bodyweight', 'band'].includes(s.type) ? ', left and right reps' : ''}${s.dist ? ', distance' : ''}${s.type === 'rack' && s.pair ? ', a pair' : ''}</b></div>
-  <div class="sec"><h5>Main muscle</h5><span>counts toward weekly volume</span></div><div class="chipz cap">${MUSC.map(m => `<button data-act="nexF" data-f="primary" data-v="${m}" class="${m === s.primary ? 'on' : ''}">${m}</button>`).join('')}</div>
+  <div class="sec"><h5>Group</h5><span>${s.needsGroup ? 'imported without a clear muscle: pick one' : 'where it sits in the library'}</span></div><div class="chipz">${NEX_GROUPS.map(([g, ms]) => `<button data-act="nexGroup" data-v="${g}" class="${ms.includes(s.primary) && !s.needsGroup ? 'on' : ''}" aria-pressed="${ms.includes(s.primary) && !s.needsGroup}">${g}</button>`).join('')}</div>
+  ${(() => { const grp = NEX_GROUPS.find(([, ms]) => ms.includes(s.primary)); return grp && grp[1].length > 1 ? `<div class="sec"><h5>Main muscle</h5><span>counts toward weekly volume</span></div><div class="chipz cap">${grp[1].map(m => `<button data-act="nexF" data-f="primary" data-v="${m}" class="${m === s.primary ? 'on' : ''}">${m}</button>`).join('')}</div>` : ''; })()}
   <div class="sec"><h5>Also works</h5><span>counts as half a set</span></div><div class="chipz cap">${L.MUSCLES.filter(m => m !== s.primary).map(m => `<button data-act="nexSec" data-v="${m}" class="${s.sec.includes(m) ? 'on2' : ''}" aria-pressed="${s.sec.includes(m)}">${m}</button>`).join('')}</div>
-  <div class="card list" style="margin-top:12px">${sr('One side at a time', `<button class="tog" role="switch" aria-checked="${s.uni}" data-act="nexTog" data-f="uni" aria-label="One side at a time"></button>`, 'Log left and right reps separately')}${s.type === 'rack' ? sr('A pair (one in each hand)', `<button class="tog" role="switch" aria-checked="${s.pair}" data-act="nexTog" data-f="pair" aria-label="Pair"></button>`, 'Volume counts both') : ''}${sr('Also log distance', `<button class="tog" role="switch" aria-checked="${s.dist}" data-act="nexTog" data-f="dist" aria-label="Distance"></button>`, 'For carries and sled pushes')}${sr('Default rest', valc(s.rest ? mmss(s.rest) : 'none'), '', 'data-act="nexRest"')}${['barbell', 'machine'].includes(s.type) ? sr('Warm-up sets', valc(s.warm === 'off' ? 'Off' : 'Ask'), '', 'data-act="nexWarm"') : ''}</div>
+  <div class="card list" style="margin-top:12px">${sr('One side at a time', `<button class="tog" role="switch" aria-checked="${s.uni}" data-act="nexTog" data-f="uni" aria-label="One side at a time"></button>`, 'Log left and right reps separately')}${s.type === 'rack' ? sr('A pair (one in each hand)', `<button class="tog" role="switch" aria-checked="${s.pair}" data-act="nexTog" data-f="pair" aria-label="Pair"></button>`, 'Volume counts both') : ''}${sr('Also log distance', `<button class="tog" role="switch" aria-checked="${s.dist}" data-act="nexTog" data-f="dist" aria-label="Distance"></button>`, 'For carries and sled pushes')}${sr('Favourite', `<button class="tog" role="switch" aria-checked="${s.fav}" data-act="nexTog" data-f="fav" aria-label="Favourite"></button>`, 'Shows first when you pick an exercise')}${sr('Default rest', valc(s.rest ? mmss(s.rest) : 'none'), '', 'data-act="nexRest"')}${['barbell', 'machine'].includes(s.type) ? sr('Warm-up sets', valc(s.warm === 'off' ? 'Off' : 'Ask'), '', 'data-act="nexWarm"') : ''}</div>
   <label class="card fld" style="margin-top:10px"><small>Pinned note</small><input data-in="nexnote" value="${esc(s.note)}" maxlength="140" placeholder="Landmine in the corner, half-kneeling"></label>
   <button class="btn" style="margin-top:14px" data-act="nexSave">${ic('check', 'sm')}Save exercise</button>
   ${s.id ? `<div class="btns">${s.custom ? `<button class="btn2 danger" data-act="nexHide">${ic('trash', 'sm')}Remove from library</button>` : (Store.get('exprefs', s.id) ? `<button class="btn2" data-act="nexReset">Reset to built-in</button>` : '')}</div>` : ''}`;
 }};
+const NEX_GROUPS = [['Chest', ['chest']], ['Back', ['back', 'traps']], ['Shoulders', ['shoulders']], ['Arms', ['biceps', 'triceps', 'forearms']], ['Legs', ['quads', 'hamstrings', 'glutes', 'calves']], ['Core', ['core']], ['Cardio', ['cardio']]];
+A.nexGroup = d => { const s = NEWEX, g = NEX_GROUPS.find(x => x[0] === d.v); if (!g) return; if (!g[1].includes(s.primary) || s.needsGroup) s.primary = g[1][0]; s.needsGroup = false; s.sec = s.sec.filter(x => x !== s.primary); render(); };
 IN.nexname = v => { NEWEX.name = v; };
 IN.nexnote = v => { NEWEX.note = v.slice(0, 140); };
 A.nexF = d => { const s = NEWEX; s[d.f] = d.v; if (d.f === 'type') { const T = TYPEINFO.find(t => t[0] === d.v); s.variant = T[3][0] || ''; s.rest = L.defaultRest({logType: d.v, variant: s.variant, primary: s.primary, secondary: s.sec}); s.pair = d.v === 'rack' && s.variant === 'dumbbell'; } if (d.f === 'primary') s.sec = s.sec.filter(x => x !== d.v); render(); };
@@ -502,8 +579,8 @@ A.nexSave = () => {
   if (!name) return toast('Give it a name first.');
   const fields = {name, logType: s.type, variant: s.variant, primary: s.primary, secondary: s.sec, unilateral: s.uni, distance: s.dist};
   let id = s.id;
-  if (s.custom) { id = id || 'c_' + L.normName(name).replace(/ /g, '-').slice(0, 30) + '_' + Date.now().toString(36); const old = Store.get('exercises', id) || {}; Store.put('exercises', Object.assign({}, old, fields, {id, custom: true, pair: s.pair, rest: s.rest, warm: s.warm, note: s.note})); }
-  else savePref(id, {fields, pair: s.pair, rest: s.rest, warm: s.warm, note: s.note});
+  if (s.custom) { id = id || 'c_' + L.normName(name).replace(/ /g, '-').slice(0, 30) + '_' + Date.now().toString(36); const old = Store.get('exercises', id) || {}; Store.put('exercises', Object.assign({}, old, fields, {id, custom: true, pair: s.pair, rest: s.rest, warm: s.warm, note: s.note, needsGroup: false})); savePref(id, {fav: !!s.fav}); }
+  else savePref(id, {fields, pair: s.pair, rest: s.rest, warm: s.warm, note: s.note, fav: !!s.fav});
   const from = S.p.from; NEWEX = null; D._ex.clear();
   if (from === 'add' && D.session() && !s.id) { const se = D.session(), cur = curItem(se), it = makeItem(id, 3, 0); se.items.splice(cur ? se.items.indexOf(cur) + 1 : 0, 0, it); se.cur = it.uid; D.saveSession(se); nav('log', {}, {replace: true}); }
   else if (from === 'tpl' && TPL && !s.id) { TPL.items.push({exId: id, sets: 3, reps: 8, link: false}); history.back(); }
@@ -527,7 +604,7 @@ VIEWS.setup = {dock: false, render() {
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Quick setup</h3><p class="lede">Three things, then you're lifting. All of it can change later in Settings.</p>
   <label class="card fld"><small>Your name (for home)</small><input data-in="suname" value="${esc(SETUP.name)}" maxlength="30" placeholder="optional" autocomplete="given-name"></label>
   <div class="card" style="margin-top:12px;padding:14px 16px 10px"><div class="hd"><div><b style="font-size:15px;font-weight:800">Bodyweight</b><p>for pull-ups, dips and push-ups</p></div><b class="serif" style="font-size:40px" data-wv>${(+SETUP.bw).toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div>${strip('su', range(40, 140, .5), +SETUP.bw, v => fmt(v), 'small', 'Bodyweight')}</div>
-  <div class="card list" style="margin-top:12px">${sr('Bar weight', segb('suBar', [[20, '20'], [15, '15']], SETUP.bar), 'Your usual Olympic bar, kg')}${sr('Theme', segb('suTheme', [['light', 'Light'], ['dark', 'Dark'], ['device', 'Device']], SETUP.theme))}${sr('Units', '<span class="val">kg, km</span>')}</div>
+  <div class="card list" style="margin-top:12px">${sr('Bar weight', segb('suBar', [[20, '20'], [15, '15']], SETUP.bar), 'Your usual Olympic bar, kg')}${sr('Theme', segb('suTheme', [['light', 'Light'], ['dark', 'Dark'], ['device', 'Device']], SETUP.theme))}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}${sr('Units', '<span class="val">kg, km</span>')}</div>
   <button class="btn" style="margin-top:20px" data-act="suDone">Start lifting</button>`;
 }};
 STRIP.su = {live(v) { SETUP.bw = v; $$('[data-wv]').forEach(x => x.innerHTML = `${v.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small>`); }, set(v) { SETUP.bw = v; }};
@@ -648,9 +725,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 (function start() {
   if (!Store.available) { view.innerHTML = `<div class="card empty" style="margin-top:60px"><b>This browser is blocking storage.</b><p class="lede">LIFT keeps your workouts on this phone, so it needs site storage. Leave private mode or allow storage for this site.</p></div>`; return; }
   applyTheme();
+  I18N.setLang(D.settings().lang);
   Store.persist();
   S.view = defaultView();
   history.replaceState({v: S.view, p: {}}, '');
+  /* after switching back to English the page reloads; land on Settings again */
+  try { const v = sessionStorage.getItem('lift_view'); if (v) { sessionStorage.removeItem('lift_view'); history.pushState({v, p: {}}, ''); S.view = v; } } catch (e) {}
   render();
   if (D.session()) wake();
 })();

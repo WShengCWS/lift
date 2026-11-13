@@ -10,7 +10,7 @@
 @font-face{font-family:"Instrument Serif";src:url(fonts/instrument-serif-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
 @font-face{font-family:Manrope;src:url(fonts/manrope.woff2) format("woff2");font-weight:500 800;font-style:normal;font-display:swap}
 
-:root{color-scheme:light;--plate-lt-ink:#333;--plate-lt-edge:#ccc;--knob-shadow:#0003;--disc-hi:#555b67;--disc-mid:#22242a;--disc-lo:#121316;--disc-rim:rgba(255,255,255,.06);--disc-rim-on:rgba(255,255,255,.08);--disc-shadow:rgba(0,0,0,.6);--chip-rim:rgba(255,255,255,.18);--chip-shadow:rgba(0,0,0,.5);--mask:#000;--card-shadow:rgba(0,0,0,.04);--font-body:Manrope,system-ui,sans-serif;--font-display:"Instrument Serif",serif;--on-fill:#fdfcfa;--on-ok:#0c1a12;--on-over:#fdfcfa;
+:root{color-scheme:light;--plate-lt-ink:#333;--plate-lt-edge:#ccc;--knob-shadow:#0003;--disc-hi:#555b67;--disc-mid:#22242a;--disc-lo:#121316;--disc-rim:rgba(255,255,255,.06);--disc-rim-on:rgba(255,255,255,.08);--disc-shadow:rgba(0,0,0,.6);--chip-rim:rgba(255,255,255,.18);--chip-shadow:rgba(0,0,0,.5);--mask:#000;--card-shadow:rgba(0,0,0,.04);--font-body:Manrope,system-ui,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;--font-display:"Instrument Serif","Songti SC","Noto Serif SC",serif;--on-fill:#fdfcfa;--on-ok:#0c1a12;--on-over:#fdfcfa;
  --ink:#15161b;--soft:rgba(21,22,27,.62);--glass:rgba(255,255,255,.42);--glass-hi:rgba(255,255,255,.8);--edge:rgba(255,255,255,.78);--track:rgba(21,22,27,.08);--band:rgba(42,157,92,.16);--cta:#15161b;--cta-ink:#fff;
  --spark1:rgba(255,255,255,.95);--spark2:rgba(110,130,165,.35);--spark-op:.75;--shadow:rgba(70,90,130,.35);--accent:#d7263d;--under:#8a5e00;--ok:#2a9d5c;--over:#c81e36;--off:rgba(21,22,27,.12);--scrim:rgba(40,50,70,.25);--sheet:rgba(250,248,246,.92);
  --rod:#8e96a5;--sleeve:#b7bdc8;--frame:#8e96a5;--stack:#3a3e48;--stack-on:#1e2128;--chrome2:#9aa1ad;--solid:#f7f5f3;--paper:#fff;--solid-card:#f6f3f1;--solid-hi:#fff;
@@ -293,3 +293,52 @@ html[data-theme=dark] .delta span{color:var(--on-ok)}
 .banner b{font-size:14px}.banner small{display:block;font-size:12px;color:var(--soft);font-weight:600;margin-top:2px}
 .fin h3{font-family:var(--font-display);font-weight:400;font-size:52px;line-height:.95;margin-top:4px;letter-spacing:-.5px}
 .picker{max-height:50vh;overflow:auto}
+/* UAT 1 (2026-11-13): tap the big weight to type it; last-time link; warm-up and working rows; + tiles */
+.bigbtn{all:unset;box-sizing:border-box;display:block;width:100%;cursor:text;text-align:center;font-family:var(--font-display);font-size:104px;line-height:.95;letter-spacing:-2px;margin-top:10px;border-radius:20px}
+.bigbtn:active{transform:scale(.98)}
+.lastb{all:unset;cursor:pointer;color:inherit;font:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;padding:6px 0}
+.repsc .lastb{display:block;font-size:12px;font-weight:700;color:var(--soft);padding:2px 0}
+.rowlbl{font-size:12px;font-weight:800;color:var(--soft);margin:14px 2px -4px}
+.sets2.warm button{min-width:54px;padding:7px 9px;font-size:12px;border-radius:14px}
+.sets2 .add{flex:0 0 auto;min-width:48px;display:flex;align-items:center;justify-content:center;background:none;border:1.5px dashed var(--soft);color:var(--soft)}
+.sets2.warm .add{min-width:42px}
+/* UAT 1 plan B: rest over works like an alarm clock (full screen, slide to lift) */
+#alarm{position:fixed;inset:0;z-index:90;display:none}
+#alarm.open{display:block}
+.alarm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);background:var(--bg-flat)}
+.alarm:before{content:"";position:absolute;inset:0;background:var(--bg);opacity:.96}
+.alarm-in{position:relative;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:stretch;text-align:center}
+.alarm-ring{width:84px;height:84px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--over);color:var(--on-over,#fff)}
+.alarm-ring .ic{width:40px;height:40px}
+.alarm-h{font-family:var(--font-display);font-weight:400;font-size:64px;line-height:1;margin-top:18px;letter-spacing:-1px}
+.alarm-ago{margin-top:8px;font-size:15px}
+.alarm-next{margin-top:24px;padding:16px;text-align:left}
+.alarm-row{display:flex;align-items:baseline;gap:10px;margin-top:4px}.alarm-row b:first-child{font-size:17px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.alarm-row .serif{font-size:36px;margin-left:auto;white-space:nowrap}
+.slide{--p:0;position:relative;margin-top:28px;height:68px;border-radius:34px;background:var(--glass-hi);border:1px solid var(--edge);overflow:hidden;touch-action:none}
+.slide:before{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--ok);opacity:calc(var(--p) * .9);transition:opacity .1s}
+.slide-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--soft);pointer-events:none;opacity:calc(1 - var(--p))}
+.knob{all:unset;box-sizing:border-box;position:absolute;left:4px;top:4px;width:58px;height:58px;border-radius:50%;background:var(--cta);color:var(--cta-ink);display:flex;align-items:center;justify-content:center;cursor:grab;transition:transform .35s cubic-bezier(.2,.8,.2,1);box-shadow:0 8px 18px -8px var(--shadow)}
+.knob:active{cursor:grabbing}
+.alarm-snooze{margin-top:12px;flex:0 0 auto;width:100%}
+@media (prefers-reduced-motion:no-preference){.alarm-ring{animation:alarmpulse 1.2s ease-in-out infinite}}
+@keyframes alarmpulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 color-mix(in srgb,var(--over) 45%,transparent)}50%{transform:scale(1.06);box-shadow:0 0 0 18px transparent}}
+/* UAT 1 plan C: library rows with a favourite star */
+.librow{display:flex;align-items:center;border-bottom:1px solid var(--track)}.list>.librow:last-child{border:0}
+.librow>button.row{border:0;flex:1;min-width:0}
+.star{all:unset;cursor:pointer;flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--soft);border-radius:14px}
+.star.on{color:var(--under)}.star.on .ic{fill:currentColor}
+/* UAT 1 plan D: tappable calendar (12 weeks and month), balance bars, trend chips */
+.heat button{all:unset;cursor:pointer;aspect-ratio:1;border-radius:5px;background:var(--off)}
+.heat button.a{background:color-mix(in srgb,var(--ok) 45%,transparent)}.heat button.b{background:var(--ok)}.heat button.t{box-shadow:inset 0 0 0 2px var(--ink)}.heat button.f{opacity:.35;cursor:default}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+.mgrid .wd{font-size:11px;font-weight:800;color:var(--soft);text-align:center;padding-bottom:2px}
+.mgrid button{all:unset;cursor:pointer;aspect-ratio:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--off);min-height:36px}
+.mgrid button.a{background:color-mix(in srgb,var(--ok) 40%,transparent)}.mgrid button.b{background:var(--ok);color:var(--on-ok)}
+.mgrid button.t{box-shadow:inset 0 0 0 2px var(--ink)}.mgrid button.f{opacity:.4}
+.bal{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:12px 0 4px;font-size:13px;font-weight:700}
+.bal b{font-weight:800}.bal small{grid-column:1/-1;font-size:11px;font-weight:800;padding-bottom:6px;border-bottom:1px solid var(--track)}.list>.bal:last-child small{border:0}
+.baltr{height:10px;border-radius:5px;background:var(--soft);opacity:.9;overflow:hidden;position:relative}.baltr i{position:absolute;inset:0 auto 0 0;background:var(--ink);border-radius:5px 0 0 5px}
+.alarm:focus{outline:none}
+
+/* Chinese: the display serif has no CJK, so headings fall back to a song face; keep tracking neutral */
+.lang-zh .pt,.lang-zh .ptl,.lang-zh .wwords>div,.lang-zh .fin h3,.lang-zh .alarm-h,.lang-zh .focus h4,.lang-zh .emptyc .et{letter-spacing:0}

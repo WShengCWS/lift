@@ -152,15 +152,14 @@ function logScreen(s, it, e, i) {
     h += nx ? `<button class="logb" data-act="jump" data-uid="${nx.uid}">Next: ${esc(D.ex(nx.exId).name)}</button>` : `<button class="logb" data-act="finish">${ic('check')}Finish workout</button>`;
     const lastReal = it.sets.filter(x => x.done && x.type !== 'warmup').pop();
     const dropOk = lastReal && ['barbell', 'rack', 'machine'].includes(e.logType) && !e.distance;
-    h += `<div class="btns"><button class="btn2" data-act="addSet">${ic('plus', 'sm')}Add set</button>${dropOk ? `<button class="btn2" data-act="addDrop">Drop set, ${fmt(L.dropWeight(e, lastReal.kg, st))} kg</button>` : `<button class="btn2" data-act="overview">All exercises</button>`}</div>`;
+    if (dropOk) h += `<div class="btns"><button class="btn2" data-act="addDrop">Drop set, ${fmt(L.dropWeight(e, lastReal.kg, st))} kg</button></div>`;
   } else h += logButton(s, it, e, c);
   if (!done && c.type === 'drop') h += `<div class="capx" style="margin-top:8px">No rest timer for a drop. Strip the plates and go.</div>`;
   if (!done) { const grp = groupOf(s, it); if (grp.length > 1) { const pos = grp.indexOf(it), nx = grp.slice(pos + 1).find(x => curIdx(x) >= 0); h += `<div class="capx" style="margin-top:8px">${nx ? `Then straight to ${groupLabels(s)[nx.uid]}, ${esc(D.ex(nx.exId).name)}. No rest in between.` : `Rest ${mmss(restFor(e, c))} starts after this set.`}</div>`; } }
   h += tiles(s, it, e, i);
   if (!done) h += `<button class="mapl" data-act="setNote" style="font-weight:700;color:var(--soft)">${c.note ? `${ic('note', 'xs')} ${esc(c.note)}` : 'Add a note to this set'}</button>`;
   /* always-visible way to add a movement mid-workout (owner request, 2026-11-09) */
-  const dupAll = done && !(it.sets.filter(x => x.done && x.type !== 'warmup').length && ['barbell', 'rack', 'machine'].includes(e.logType) && !e.distance);
-  h += `<div class="exrow"><button class="btn2" data-act="library" data-m="add">${ic('plus', 'sm')}Add exercise</button>${dupAll ? '' : `<button class="btn2" data-act="overview">${ic('more', 'sm')}All exercises (${s.items.length})</button>`}</div>`;
+  h += `<div class="exrow"><button class="btn2" data-act="library" data-m="add">${ic('plus', 'sm')}Add exercise</button><button class="btn2" data-act="overview">${ic('more', 'sm')}All exercises (${s.items.length})</button></div>`;
   return h;
 }
 function logButton(s, it, e, c) {
@@ -174,14 +173,18 @@ function logButton(s, it, e, c) {
   return `<button class="logb" data-act="logSet">${ic('check')}<span data-logtxt>${verb}: ${setShort(c, e)}</span></button>`;
 }
 function tiles(s, it, e, i) {
-  if (e.logType === 'cardio' && it.sets.length < 2) return '';
+  if (e.logType === 'cardio') return '';
   const prs = prTagsFor(s);
-  return `<div class="sets2" data-tiles>${it.sets.map((x, j) => `<button class="${x.done ? '' : j === i ? 'cur' : 'n'} ${prs.has(x.id) ? 'pr' : ''}" data-act="tile" data-i="${j}" aria-label="${x.done ? 'Edit' : 'Go to'} set ${j + 1}${prs.has(x.id) ? ', personal record' : ''}">${typeLetter(x.type) ? `<i>${typeLetter(x.type)}</i>` : ''}${setShort(x, e)}</button>`).join('')}</div>`;
+  const tile = (x, j) => `<button class="${x.done ? '' : j === i ? 'cur' : 'n'} ${prs.has(x.id) ? 'pr' : ''}" data-act="tile" data-i="${j}" aria-label="${x.done ? 'Edit' : 'Go to'} set ${j + 1}${prs.has(x.id) ? ', personal record' : ''}${x.done ? '' : '. Press and hold to remove'}">${['drop', 'failure'].includes(x.type) ? `<i>${typeLetter(x.type)}</i>` : ''}${setShort(x, e)}</button>`;
+  const warm = it.sets.map((x, j) => [x, j]).filter(([x]) => x.type === 'warmup'), work = it.sets.map((x, j) => [x, j]).filter(([x]) => x.type !== 'warmup');
+  const plus = (act, lbl) => `<button class="add" data-act="${act}" aria-label="${lbl}">${ic('plus', 'sm')}</button>`;
+  let h = '';
+  if (warm.length) h += `<div class="rowlbl">Warm-up</div><div class="sets2 warm" data-tiles>${warm.map(([x, j]) => tile(x, j)).join('')}${plus('addWarmSet', 'Add a warm-up set')}</div>`;
+  h += `${warm.length ? '<div class="rowlbl">Working sets</div>' : ''}<div class="sets2" data-tiles>${work.map(([x, j]) => tile(x, j)).join('')}${plus('addSet', 'Add a set')}</div>`;
+  return h;
 }
 function bindLog(el) {
-  const t = $('[data-tiles]', el); if (!t) return;
-  const cur = $('.cur', t);
-  t.scrollLeft = cur ? cur.offsetLeft - t.offsetLeft - t.clientWidth / 2 + cur.offsetWidth / 2 : t.scrollWidth;
+  $$('[data-tiles]', el).forEach(t => { const cur = $('.cur', t); t.scrollLeft = cur ? cur.offsetLeft - t.offsetLeft - t.clientWidth / 2 + cur.offsetWidth / 2 : t.scrollWidth; });
 }
 
 /* ---------- per-type bodies ---------- */
@@ -201,7 +204,9 @@ function hintsRow(s, it, e, c) {
   }
   return pill + (out.length ? `<div class="hints">${out.join('')}</div>` : '');
 }
-const bigKg = kg => `<div class="bigw" data-big>${fmt(kg)}<em> kg</em></div>`;
+const bigKg = kg => `<button class="bigw bigbtn" data-act="typeKg" data-big aria-label="${fmt(kg)} kg. Tap to type a weight">${fmt(kg)}<em> kg</em></button>`;
+/* A6: "last 50 × 6" opens every set from last time */
+const lastBtn = e => `<button class="lastb" data-act="lastPeek" aria-label="Show last session">${lastText(e)}</button>`;
 function repsSteppers(e, c, lblW = 'Weight', wVal) {
   if (e.unilateral) return `<div class="steps">${stepper('Left', c.l || 0, 'cur', 'data-f="l"')}${stepper('Right', c.r || 0, 'cur', 'data-f="r"')}</div><div class="capx" style="margin-top:6px">${(c.l || 0) === (c.r || 0) ? 'Even on both sides' : `Right is ${Math.abs((c.l || 0) - (c.r || 0))} rep${Math.abs((c.l || 0) - (c.r || 0)) > 1 ? 's' : ''} ${(c.r || 0) < (c.l || 0) ? 'behind' : 'ahead'}`}</div>${wVal != null ? `<div class="steps one">${stepper(lblW, wVal, 'cur', 'data-f="kg"')}</div>` : ''}`;
   return `<div class="steps">${stepper(lblW, wVal, 'cur', 'data-f="kg"')}${stepper('Reps', c.reps || 0, 'cur', 'data-f="reps"')}</div>`;
@@ -214,7 +219,7 @@ const LOGTYPE = {
     const st = D.settings(), bar = L.barFor(e, st), sp = L.splitPlates((c.kg - bar) / 2, L.plateSet(st));
     const prev = c.type === 'drop' ? it.sets.slice(0, it.sets.indexOf(c)).filter(x => x.done).pop() : null;
     const tail = prev ? `was ${L.splitPlates((prev.kg - bar) / 2, L.plateSet(st)).plates.join(' + ') || 'nothing'}` : `steps of ${fmt(L.stepFor(e, st))} kg`;
-    return `${bigKg(c.kg)}${hintsRow(s, it, e, c)}<div class="card vis">${barSVG(c.kg, bar, e.variant)}<div class="capx">${prev ? '' : fmt(bar) + ' kg bar, '}per side ${sp.plates.join(' + ') || 'nothing'}${sp.rest ? ` <b style="color:var(--under)">· ${fmt(sp.rest)} short</b>` : ''}, ${tail}</div></div>${e.unilateral ? repsSteppers(e, c, 'Weight', fmt(c.kg)) : repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
+    return `${bigKg(c.kg)}<div class="subw">${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis">${barSVG(c.kg, bar, e.variant)}<div class="capx">${prev ? '' : fmt(bar) + ' kg bar, '}per side ${sp.plates.join(' + ') || 'nothing'}${sp.rest ? ` <b style="color:var(--under)">· ${fmt(sp.rest)} short</b>` : ''}, ${tail}</div></div>${e.unilateral ? repsSteppers(e, c, 'Weight', fmt(c.kg)) : repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
   },
   rack(s, it, e, c) {
     const st = D.settings();
@@ -222,17 +227,18 @@ const LOGTYPE = {
     if (e.variant === 'kettlebell') vis = `<div class="notch" aria-hidden="true"></div><div class="strip" data-strip="kg" data-for="${esc(c.id)}" role="listbox" aria-label="Kettlebell">${st.kettlebells.slice().sort((a, b) => a - b).map(k => { const col = L.KB_COLORS[k] || '#555b67', lt = [4, 6, 10, 14, 16, 18, 22, 40].includes(k); return `<button role="option" data-pick="${k}" class="${k === c.kg ? 'on' : ''}" style="background:radial-gradient(circle at 38% 30%,#ffffff55,transparent 45%),${col};color:${lt ? '#222' : '#fff'}">${k}</button>`; }).join('')}</div><div class="capx">swipe the kettlebells your gym has</div>`;
     else if (e.variant === 'plate') vis = `<div class="plates">${[1.25, 2.5, 5, 10, 15, 20, 25].map(k => { const [hh] = PL[k]; const d = Math.max(26, hh * .36); return `<button data-act="setF" data-f="kg" data-v="${k}" class="${k === c.kg ? 'on' : ''}" aria-label="${k} kilogram plate"><span style="width:${d}px;height:${d}px;background:${L.PLATE_COLORS[k]};color:${[5, 1.25].includes(k) ? 'var(--plate-lt-ink)' : [15, 10].includes(k) ? 'var(--on-ok)' : 'var(--on-fill)'}">${fmt(k)}</span></button>`; }).join('')}</div><div class="capx">tap the plate you are holding</div>`;
     else vis = `${strip('kg', L.dumbbellRange(st), c.kg, v => fmt(v), '', 'Dumbbell weight', c.id)}<div class="capx">swipe the rack, ${fmt(st.dbMin)} to ${fmt(st.dbMax)} kg, every ${fmt(st.steps.dumbbell)} kg</div>`;
-    const sub = e.pair ? `each hand, ${fmt(c.kg * 2)} kg total, ${lastText(e)}` : `${e.variant === 'plate' ? 'one plate' : e.variant === 'kettlebell' ? 'one kettlebell' : 'one dumbbell'}, ${lastText(e)}`;
+    const sub = e.pair ? `each hand, ${fmt(c.kg * 2)} kg total, ${lastBtn(e)}` : `${e.variant === 'plate' ? 'one plate' : e.variant === 'kettlebell' ? 'one kettlebell' : 'one dumbbell'}, ${lastBtn(e)}`;
     return `${bigKg(c.kg)}<div class="subw" data-sub>${sub}</div>${hintsRow(s, it, e, c)}<div class="card vis">${vis}</div>${e.distance ? distanceBlock(c) : repsSteppers(e, c, e.pair ? 'Weight each' : 'Weight', fmt(c.kg))}`;
   },
   machine(s, it, e, c) {
     const st = D.settings(), m = L.machineFor(e, st);
     if (m.kind === 'plates') {
       const per = Math.max(0, (c.kg - (m.sled || 0)) / 2), sp = L.splitPlates(per, L.plateSet(st));
-      return `${bigKg(c.kg)}<div class="subw">${m.sled ? `sled ${fmt(m.sled)} kg + ${fmt(per)} per side` : `${fmt(per)} per side`}, ${lastText(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis">${machineSVG(per)}<div class="capx">per side ${sp.plates.join(' + ') || 'nothing'}${e.seat ? `, ${esc(e.seat)}` : ''}</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
+      return `${bigKg(c.kg)}<div class="subw">${m.sled ? `sled ${fmt(m.sled)} kg + ${fmt(per)} per side` : `${fmt(per)} per side`}, ${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis">${machineSVG(per)}<div class="capx">per side ${sp.plates.join(' + ') || 'nothing'}${e.seat ? `, ${esc(e.seat)}` : ''}</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
     }
-    const step = L.stepFor(e, st), n = m.plates || 20;
-    return `${bigKg(c.kg)}<div class="subw">pin ${Math.round(c.kg / step)} of ${n}${e.seat ? `, ${esc(e.seat)}` : ''}, ${lastText(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis ${groupOf(s, it).length > 1 ? 'short' : ''}">${stackSVG(c.kg, step, n)}<div class="capx">stack in ${fmt(step)} kg steps${e.seat ? '' : ', seat settings: tap the name'}</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
+    const step = L.stepFor(e, st), n = Math.min(40, Math.max(m.plates || 20, Math.ceil(c.kg / step) + 2));
+    const off = +((((+c.kg || 0) % step) + step) % step).toFixed(2) || step, top = Math.max(100, Math.ceil((c.kg * 1.6) / step) * step);
+    return `${bigKg(c.kg)}<div class="subw">pin ${Math.round(c.kg / step)}${e.seat ? `, ${esc(e.seat)}` : ''}, ${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis short">${stackSVG(c.kg, step, n)}${strip('kg', range(off, top, step), c.kg, v => fmt(v), 'small', 'Stack weight', c.id)}<div class="capx">swipe the stack, ${fmt(step)} kg steps${e.stepLearned ? ' (from your history)' : ''}. Change the step: tap the name</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
   },
   bodyweight(s, it, e, c) {
     const st = D.settings(), bw = D.latestBw(), mode = c.mode || 'plain';
@@ -245,7 +251,7 @@ const LOGTYPE = {
     if (mode === 'assisted') picker = `<div class="seg wide" style="margin:6px 6px 0" role="radiogroup"><button class="${c.atype !== 'machine' ? 'on' : ''}" data-act="setF" data-f="atype" data-v="band">Band</button><button class="${c.atype === 'machine' ? 'on' : ''}" data-act="setF" data-f="atype" data-v="machine">Assist machine</button></div>` +
       (c.atype !== 'machine' ? `<div class="bands">${st.bands.map(b => `<button data-act="bwBand" data-id="${esc(b.id)}" class="${b.id === c.band ? 'on' : ''}"><i style="background:${esc(b.color)}"></i>${esc(b.name)}<small>≈ ${fmt(b.kg)} kg</small></button>`).join('')}</div><div class="capx">pick the band you used</div>` : strip('assist', range(assistM.min || 5, assistM.max || 70, assistM.step || 5), Math.abs(c.add || 0), v => '−' + fmt(v), '', 'Counterweight', c.id) + `<div class="capx">counterweight on the assist machine</div>`);
     const lastR = (() => { const w = lastTop(e); return w ? Math.max(...w.map(x => L.setReps(x, e))) : null; })();
-    const reps = e.unilateral ? `<div class="steps">${stepper('Left', c.l || 0, 'cur', 'data-f="l"')}${stepper('Right', c.r || 0, 'cur', 'data-f="r"')}</div>` : `<div class="card repsc"><div><small>Reps</small><span class="last">${lastR != null ? 'last ' + lastR : 'first time'}</span></div><button data-step="cur" data-f="reps" data-dir="-1" aria-label="Fewer reps">−</button><b>${c.reps || 0}</b><button data-step="cur" data-f="reps" data-dir="1" aria-label="More reps">+</button></div>`;
+    const reps = e.unilateral ? `<div class="steps">${stepper('Left', c.l || 0, 'cur', 'data-f="l"')}${stepper('Right', c.r || 0, 'cur', 'data-f="r"')}</div>` : `<div class="card repsc"><div><small>Reps</small><button class="last lastb" data-act="lastPeek">${lastR != null ? 'last ' + lastR : 'first time'}</button></div><button data-step="cur" data-f="reps" data-dir="-1" aria-label="Fewer reps">−</button><b>${c.reps || 0}</b><button data-step="cur" data-f="reps" data-dir="1" aria-label="More reps">+</button></div>`;
     return `<div class="seg wide" role="radiogroup" aria-label="How">${[['plain', 'Bodyweight'], ['added', '+ Weight'], ['assisted', 'Assisted']].map(([m, l]) => `<button role="radio" aria-checked="${mode === m}" class="${mode === m ? 'on' : ''}" data-act="bwMode" data-v="${m}">${l}</button>`).join('')}</div>
       <div class="card eq"><div class="eqt"><small>You</small><b>${fmt(bw)}</b></div>${mid}<span class="op">=</span><div class="eqt res"><small>Moved</small><b data-net>${fmt(net)}</b></div></div>
       ${mode === 'plain' ? `<div class="capx" style="margin-top:8px">Your bodyweight comes from the weekly weigh-in, ${kgs(bw)}</div>` : `<div class="card vis">${picker}</div>`}${reps}`;
@@ -259,7 +265,7 @@ const LOGTYPE = {
   timed(s, it, e, c) {
     const run = s.hold && s.hold.setId === c.id, sec = run ? (Date.now() - s.hold.start) / 1000 : (c.sec || 0), tg = c.target || 60, R = 92, C = 2 * Math.PI * R, f = Math.min(1, sec / tg);
     return `<div class="ringw"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="${R}" fill="none" stroke="var(--track)" stroke-width="12"/><circle data-holdring cx="110" cy="110" r="${R}" fill="none" stroke="${f >= 1 ? 'var(--ok)' : 'var(--ink)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - f)}" transform="rotate(-90 110 110)"/></svg>
-      <div class="ringc"><b class="serif" data-holdt>${mmss(sec)}</b><span>target ${mmss(tg)}, ${lastText(e)}</span></div></div>
+      <div class="ringc"><b class="serif" data-holdt>${mmss(sec)}</b><span>target ${mmss(tg)}, ${lastBtn(e)}</span></div></div>
       <div class="chipz" style="justify-content:center">${[30, 45, 60, 90, 120].map(t => `<button data-act="setF" data-f="target" data-v="${t}" class="${t === tg ? 'on' : ''}">${t < 60 ? t + ' s' : (t / 60) + ' min'}</button>`).join('')}</div>
       <div class="steps">${stepper('Seconds', c.sec || 0, 'cur', 'data-f="sec"')}${stepper('Added kg', fmt(c.add || 0), 'cur', 'data-f="add"')}</div>`;
   },
@@ -340,13 +346,40 @@ A.stype = d => withCur((c, e, it, s, i) => {
 A.applySug = d => withCur((c, e, it) => { const kg = +d.kg; it.sets.forEach(x => { if (!x.done && x.type === 'working' && (+x.kg || 0) < kg) x.kg = kg; }); it.sugApplied = true; });
 A.addWarm = () => withCur((c, e, it, s, i) => { const w = L.warmups(e, c.kg, D.settings()).map(x => Object.assign(blankSet(e), x)); it.sets.splice(i, 0, ...w); it.si = i; });
 A.tile = d => {
+  if (Date.now() < LP_UNTIL) return;
   const s = D.session(), it = curItem(s), j = +d.i, x = it.sets[j];
   if (!x) return;
   if (x.done) openSheet('set', {where: 'session', uid: it.uid, id: x.id});
   else { it.si = j; D.saveSession(s); render(); }
 };
 A.setNote = () => { const s = D.session(), it = curItem(s), i = curIdx(it); if (i >= 0) openSheet('set', {where: 'session', uid: it.uid, id: it.sets[i].id, noteOnly: true}); };
-A.addSet = () => { const s = D.session(), it = curItem(s), e = D.ex(it.exId); const last = it.sets.filter(x => x.done && x.type !== 'warmup').pop() || it.sets[it.sets.length - 1]; const ns = last ? copySet(last, e) : blankSet(e); ns.type = 'working'; ns.extra = true; it.sets.push(ns); it.si = it.sets.length - 1; D.saveSession(s); render(); };
+A.addSet = () => {
+  const s = D.session(), it = curItem(s), e = D.ex(it.exId), wasDone = curIdx(it) < 0;
+  const last = it.sets.filter(x => x.type !== 'warmup').pop() || it.sets[it.sets.length - 1];
+  const ns = last ? copySet(last, e) : blankSet(e); ns.type = 'working'; ns.extra = true;
+  it.sets.push(ns); if (wasDone) it.si = it.sets.length - 1;
+  D.saveSession(s); vib(8); render();
+};
+A.addWarmSet = () => {
+  const s = D.session(), it = curItem(s), e = D.ex(it.exId), warm = it.sets.filter(x => x.type === 'warmup'), last = warm[warm.length - 1];
+  const ns = last ? copySet(last, e) : blankSet(e); ns.type = 'warmup';
+  it.sets.splice(it.sets.indexOf(last) + 1, 0, ns); D.saveSession(s); vib(8); render();
+};
+/* press and hold a planned set to remove it (logged sets are edited from their sheet) */
+let LP_UNTIL = 0, lpT = null;
+document.addEventListener('pointerdown', ev => {
+  const b = ev.target.closest('.sets2 [data-act="tile"]'); if (!b) return;
+  clearTimeout(lpT);
+  lpT = setTimeout(() => {
+    const s = D.session(); if (!s) return; const it = curItem(s), j = +b.dataset.i, x = it.sets[j];
+    if (!x || x.done) return;
+    LP_UNTIL = Date.now() + 700;
+    const old = JSON.parse(JSON.stringify(s));
+    it.sets.splice(j, 1); it.si = null; D.saveSession(s); vib(20); render();
+    toast('Set removed', {action: {label: 'Undo', fn: () => { D.saveSession(old); render(); }}});
+  }, 550);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => document.addEventListener(t, () => clearTimeout(lpT)));
 A.addDrop = () => { const s = D.session(), it = curItem(s), e = D.ex(it.exId); const prev = it.sets.filter(x => x.done && x.type !== 'warmup').pop(); if (!prev) return; const ds = Object.assign(copySet(prev, e), {type: 'drop', kg: L.dropWeight(e, prev.kg, D.settings()), inserted: true, extra: true}); it.sets.push(ds); it.si = it.sets.length - 1; s.rest = null; D.saveSession(s); vib(10); render(); };
 A.jump = d => { const s = D.session(); if (!s.items.find(x => x.uid === d.uid)) return; s.cur = d.uid; D.saveSession(s); if (S.sheet) closeSheet(); render(); window.scrollTo(0, 0); };
 
@@ -356,6 +389,7 @@ A.logSet = () => {
   const it = curItem(s), e = D.ex(it.exId), i = curIdx(it); if (i < 0) return;
   const c = it.sets[i];
   if (e.logType === 'cardio' ? !(c.sec > 0) : e.logType === 'timed' ? !(c.sec > 0) : !(L.setTotalReps(c, e) > 0)) { toast(e.logType === 'timed' ? 'Hold for a few seconds first, or type the time.' : 'Add the reps first.'); return; }
+  const before = JSON.stringify(s); /* for Undo */
   c.done = true; c.ts = Date.now(); delete c.inserted;
   if (e.logType === 'bodyweight') c.bw = D.latestBw();
   if (e.logType === 'band' || (e.logType === 'bodyweight' && c.mode === 'assisted' && c.atype !== 'machine')) c.bandKg = bandOf(c.band).kg;
@@ -373,7 +407,9 @@ A.logSet = () => {
   vib([14, 40, 14]);
   const tags = prTagsFor(s).get(c.id);
   render(); window.scrollTo({top: 0, behavior: 'smooth'});
-  if (tags && D.settings().prAlerts) { toast(`${e.name} ${setShort(c, e)}, ${L.PR_LABEL[tags[0]]}`, {pr: true, ms: 4200}); vib([30, 60, 30, 60, 80]); }
+  const undo = {label: 'Undo', fn: () => { D.saveSession(JSON.parse(before)); render(); toast('Set un-logged'); }};
+  if (tags && D.settings().prAlerts) { toast(`${e.name} ${setShort(c, e)}, ${L.PR_LABEL[tags[0]]}`, {pr: true, ms: 4200, action: undo}); vib([30, 60, 30, 60, 80]); }
+  else toast(`Logged ${setShort(c, e)}`, {action: undo, ms: 3500});
 };
 A.holdStart = () => { const s = D.session(), it = curItem(s), i = curIdx(it); if (i < 0) return; s.hold = {setId: it.sets[i].id, start: Date.now(), rang: false}; D.saveSession(s); vib(20); render(); };
 A.holdStop = () => { const s = D.session(); if (!s.hold) return; const it = curItem(s), i = curIdx(it); const sec = Math.round((Date.now() - s.hold.start) / 1000); s.hold = null; if (i >= 0) it.sets[i].sec = sec; D.saveSession(s); A.logSet(); };
@@ -386,10 +422,7 @@ function tick() {
   let r = s.rest; const now = Date.now();
   /* rest that ended over 10 minutes ago is stale: drop it quietly */
   if (r && now - r.end > 600e3) { s.rest = null; r = null; D.saveSession(s); }
-  if (r && !r.rang && now >= r.end) {
-    r.rang = true; D.saveSession(s);
-    if (!document.hidden) { bell(); vibAlarm([300, 120, 300, 120, 300]); }
-  }
+  if (r && now >= r.end && !document.hidden && !ALARM.open) { r.rang = true; D.saveSession(s); showAlarm(now - r.end > 3000 ? (now - r.end) / 1000 : 0); }
   if (b) {
     if (r) { const left = (r.end - now) / 1000; b.className = 'restb ' + (left < 0 ? 'over' : 'run'); b.innerHTML = `${ic('timer', 'sm')}${left < 0 ? '+' + mmss(-left) : mmss(Math.ceil(left))}`; b.setAttribute('aria-label', left < 0 ? 'Rest over' : 'Rest ' + mmss(Math.ceil(left)) + ' left'); }
     else { b.className = 'restb idle'; b.innerHTML = `${ic('timer', 'sm')}<small>Rest</small>`; }
@@ -409,11 +442,8 @@ function unwake() { try { wl && wl.release(); } catch (e) {} wl = null; }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   wake();
-  const s = D.session(); if (!s || !s.rest) return;
-  const over = (Date.now() - s.rest.end) / 1000;
-  if (over > 600) { s.rest = null; D.saveSession(s); tick(); return; }
-  /* a PWA cannot ring a locked phone; on return, say how long ago rest ended */
-  if (over > 2 && s.rest.rangHidden !== true) { s.rest.rangHidden = true; s.rest.rang = true; D.saveSession(s); toast(`Rest ended ${mmss(over)} ago`, {ms: 5000}); vibAlarm([200, 100, 200]); }
+  /* a PWA cannot ring a locked phone; on return, tick() shows the alarm with "ended 0:40 ago" */
+  tick();
 });
 
 /* ---------- rest timer screen ---------- */
@@ -522,10 +552,13 @@ SHEETS.exopts = {title: 'Exercise options', render() {
   const it = curItem(s), e = D.ex(it.exId), st = D.settings();
   return `<div class="hd"><div style="min-width:0"><h3>${esc(e.name)}</h3><p>${esc(eqLabel(e))}, ${esc(e.primary)}</p></div></div>
     <label class="card fld"><small>Pinned note, shows every time</small><input data-in="exnote" value="${esc(e.note)}" maxlength="140" placeholder="Grip, cues, setup"></label>
-    ${e.logType === 'machine' ? `<label class="card fld"><small>Seat and pad settings</small><input data-in="exseat" value="${esc(e.seat)}" maxlength="60" placeholder="seat 4, pad 2"></label>` : ''}
+    ${e.logType === 'machine' ? `<label class="card fld"><small>Seat and pad settings</small><input data-in="exseat" value="${esc(e.seat)}" maxlength="60" placeholder="seat 4, pad 2"></label>
+    <div class="sec"><h5>Weight step on this machine</h5><span>${e.stepLearned ? 'from your history' : 'each tap of − / +'}</span></div>
+    <div class="chipz">${[1, 1.25, 2.5, 5, 10].map(v => `<button class="${L.stepFor(e, st) === v ? 'on' : ''}" data-act="exstep" data-v="${v}">${fmt(v)} kg</button>`).join('')}</div>` : ''}
     <div class="sec"><h5>Rest after each set</h5><span>${st.restPerExercise ? 'this exercise' : 'same for all (Settings)'}</span></div>
     <div class="chipz">${[0, 30, 60, 90, 120, 150, 180, 240].map(v => `<button class="${(e.rest || 0) === v ? 'on' : ''}" data-act="exrest" data-v="${v}">${v ? mmss(v) : 'none'}</button>`).join('')}</div>
     <div class="card list" style="margin-top:12px">
+      ${sr('Favourite', tog('fav', e.fav, 'Favourite').replace('data-act="toggle"', 'data-act="favCur"'), 'Shows first when you pick an exercise')}
       ${sr('Swap exercise', ic('swap', 'sm'), it.sets.some(x => x.done) ? 'Adds the new one after this' : 'Keeps the planned sets', 'data-act="library" data-m="swap"')}
       ${sr('Edit exercise', ic('edit', 'sm'), 'Type, muscles, one side at a time', `data-act="go" data-v="newex" data-id="${esc(e.id)}"`)}
       ${sr('See progress', ic('prog', 'sm'), '', `data-act="progressOf" data-id="${esc(e.id)}"`)}
@@ -583,6 +616,7 @@ SHEETS.start = {title: 'Start a workout', render() {
   const tpls = D.templates(), last = D.workouts()[0];
   return `<div class="hd"><h3>Start a workout</h3><button class="rb" data-act="go" data-v="templates" aria-label="Manage templates">${ic('book', 'sm')}</button></div>
     ${tpls.map(t => `<div class="card" style="padding:14px 16px;margin-top:10px"><div class="hd"><div style="min-width:0"><b style="font-size:17px;font-weight:800">${esc(t.name)}</b><p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.items.slice(0, 3).map(x => esc(D.ex(x.exId).name)).join(', ')}${t.items.length > 3 ? ` + ${t.items.length - 3}` : ''}</p></div><button class="btn" style="width:auto;height:44px;padding:0 18px;font-size:14px;flex:none" data-act="startTpl" data-id="${esc(t.id)}">${ic('play', 'sm')}Start</button></div></div>`).join('')}
+    ${(() => { const favs = D.library().filter(e => e.fav).slice(0, 8); return favs.length ? `<div class="sec"><h5>Quick start</h5><span>your favourites</span></div><div class="chipz">${favs.map(e => `<button data-act="startFav" data-id="${esc(e.id)}">${ic('star', 'xs')} ${esc(e.name)}</button>`).join('')}</div>` : ''; })()}
     <div class="btns" style="margin-top:12px">${last ? `<button class="btn2" data-act="repeat" data-id="${esc(last.id)}">${ic('repeat', 'sm')}Repeat ${esc(last.title)}</button>` : ''}<button class="btn2" data-act="startEmpty">Empty workout</button></div>`;
 }};
 A.startTpl = d => { const t = Store.get('templates', d.id); if (!t) return; if (D.session()) return toast('Finish or discard the current workout first.'); S.sheet = null; startWorkout({title: t.name, templateId: t.id, items: t.items}); };
@@ -600,7 +634,7 @@ A.repeat = d => {
 };
 
 /* ---------- exercise library sheet ---------- */
-const GROUPS = [['All', null], ['Chest', ['chest']], ['Back', ['back', 'traps']], ['Shoulders', ['shoulders']], ['Arms', ['biceps', 'triceps', 'forearms']], ['Legs', ['quads', 'hamstrings', 'glutes', 'calves']], ['Core', ['core']], ['Cardio', ['cardio']]];
+const GROUPS = [['All', null], ['Favourites', 'fav'], ['Chest', ['chest']], ['Back', ['back', 'traps']], ['Shoulders', ['shoulders']], ['Arms', ['biceps', 'triceps', 'forearms']], ['Legs', ['quads', 'hamstrings', 'glutes', 'calves']], ['Core', ['core']], ['Cardio', ['cardio']]];
 const TYPEICON = {barbell: 'bar', rack: 'db', machine: 'stack', bodyweight: 'user', band: 'band', timed: 'timer', cardio: 'prog'};
 let LIB = {q: '', g: 'All'};
 A.library = d => { LIB = {q: '', g: 'All'}; openSheet('library', {m: d.m || 'add', ref: d.ref || ''}); };
@@ -614,20 +648,30 @@ SHEETS.library = {cls: 'tall', title: 'Exercise library', noFocus: true, render(
 }};
 function libBody(sp) {
   const q = LIB.q.trim().toLowerCase(), g = (GROUPS.find(x => x[0] === LIB.g) || GROUPS[0])[1];
-  let list = D.library().filter(e => (!g || g.includes(e.primary)) && (!q || e.name.toLowerCase().includes(q) || e.primary.includes(q) || (L.TYPE_LABEL[e.logType] || '').toLowerCase().includes(q)));
+  let list = D.library().filter(e => (!g || (g === 'fav' ? e.fav : g.includes(e.primary))) && (!q || e.name.toLowerCase().includes(q) || e.primary.includes(q) || (L.TYPE_LABEL[e.logType] || '').toLowerCase().includes(q)));
   if (sp.m === 'progress' || sp.m === 'compare') { const used = new Set(); D.workouts().forEach(w => w.items.forEach(it => used.add(it.exId))); list = list.filter(e => used.has(e.id)); }
-  const row = e => { const l = D.lastOf(e.id); const top = l ? l.sets.filter(x => x.type !== 'warmup').pop() : null; return `<button class="row" data-act="libPick" data-id="${esc(e.id)}"><span class="addb" aria-hidden="true">${ic(TYPEICON[e.logType] || 'bar', 'sm')}</span><span class="grow"><b>${esc(e.name)}${e.custom ? ' <span class="tag w" style="font-size:10px">custom</span>' : ''}</b><small>${esc(L.TYPE_LABEL[e.logType])}${e.variant && L.VARIANT_LABEL[e.variant] ? ', ' + esc(L.VARIANT_LABEL[e.variant]) : ''}${e.unilateral ? ', one side' : ''}, ${top ? 'last ' + setShort(top, e) : 'never logged'}</small></span><span class="addb" aria-hidden="true">${ic(sp.m === 'progress' || sp.m === 'compare' ? 'chev' : 'plus', 'sm')}</span></button>`; };
+  const row = (e, act = 'libPick') => { const l = D.lastOf(e.id); const top = l ? l.sets.filter(x => x.type !== 'warmup').pop() : null; return `<div class="librow"><button class="row" data-act="${act}" ${act === 'go' ? 'data-v="newex"' : ''} data-id="${esc(e.id)}"><span class="addb" aria-hidden="true">${ic(TYPEICON[e.logType] || 'bar', 'sm')}</span><span class="grow"><b>${esc(e.name)}${e.custom ? ' <span class="tag w" style="font-size:10px">yours</span>' : ''}</b><small>${esc(L.TYPE_LABEL[e.logType])}${e.variant && L.VARIANT_LABEL[e.variant] ? ', ' + esc(L.VARIANT_LABEL[e.variant]) : ''}${e.unilateral ? ', one side' : ''}, ${top ? 'last ' + setShort(top, e) : 'never logged'}</small></span><span class="addb" aria-hidden="true">${ic(act === 'go' ? 'edit' : sp.m === 'progress' || sp.m === 'compare' ? 'chev' : 'plus', 'sm')}</span></button><button class="star ${e.fav ? 'on' : ''}" data-act="favTog" data-id="${esc(e.id)}" aria-pressed="${e.fav}" aria-label="${e.fav ? 'Remove from' : 'Add to'} favourites: ${esc(e.name)}">${ic('star', 'sm')}</button></div>`; };
   if (!list.length) return q ? `<div class="card empty" style="margin-top:12px"><b>No match for "${esc(LIB.q)}"</b><p class="lede">Create it once and it logs like any built-in exercise.</p><button class="btn" style="margin-top:12px" data-act="newexFrom" data-q="${esc(LIB.q)}">${ic('plus', 'sm')}Create "${esc(LIB.q)}"</button></div>` : `<p class="lede" style="margin-top:14px">Nothing logged yet.</p>`;
   let h = '';
+  if (sp.m === 'progress' && !q && LIB.g === 'All') h += `<div class="card list" style="margin-top:12px"><button class="row" data-act="progBw"><span class="addb" aria-hidden="true">${ic('scale', 'sm')}</span><span class="grow"><b>Bodyweight</b><small>weekly weigh-ins, ${D.weighins().length} so far</small></span>${ic('chev', 'sm')}</button></div>`;
+  if (!q && LIB.g === 'All') {
+    /* favourites first, then anything imported with an unclear muscle, then recent */
+    const favs = list.filter(e => e.fav);
+    if (favs.length) h += `<div class="sec"><h5>Favourites</h5><span>${favs.length}</span></div><div class="card list">${favs.map(e => row(e)).join('')}</div>`;
+    const unclear = list.filter(e => e.custom && e.needsGroup);
+    if (unclear.length && !['progress', 'compare'].includes(sp.m)) h += `<div class="sec"><h5>Needs a group</h5><span>tap to choose</span></div><div class="card list">${unclear.map(e => row(e, 'go')).join('')}</div>`;
+  }
   if (!q && LIB.g === 'All' && !['progress', 'compare'].includes(sp.m)) {
     const seen = new Set(), recent = [];
     for (const w of D.workouts()) for (const it of w.items) if (!seen.has(it.exId) && recent.length < 6) { seen.add(it.exId); recent.push(D.ex(it.exId)); }
-    if (recent.length) h += `<div class="sec"><h5>Recent</h5><span>last weight</span></div><div class="card list">${recent.map(row).join('')}</div>`;
+    if (recent.length) h += `<div class="sec"><h5>Recent</h5><span>last weight</span></div><div class="card list">${recent.map(e => row(e)).join('')}</div>`;
   }
   const by = {};
-  list.forEach(e => { const k = e.custom ? 'Yours' : cap(e.primary); (by[k] = by[k] || []).push(e); });
-  const keys = Object.keys(by).sort((a, b) => a === 'Yours' ? -1 : b === 'Yours' ? 1 : 0);
-  h += keys.map(k => `<div class="sec"><h5>${esc(k)}</h5><span>${by[k].length}</span></div><div class="card list">${by[k].map(row).join('')}</div>`).join('');
+  const groupOfMuscle = m => (GROUPS.find(x => Array.isArray(x[1]) && x[1].includes(m)) || ['Other'])[0];
+  list.forEach(e => { const k = groupOfMuscle(e.primary); (by[k] = by[k] || []).push(e); });
+  const order = GROUPS.map(x => x[0]).concat('Other');
+  const keys = Object.keys(by).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  h += keys.map(k => `<div class="sec"><h5>${esc(k)}</h5><span>${by[k].length}</span></div><div class="card list">${by[k].sort((a, b) => (b.fav - a.fav) || (b.custom ? 1 : 0) - (a.custom ? 1 : 0)).map(e => row(e)).join('')}</div>`).join('');
   h += `<button class="card row" style="margin-top:12px;padding:14px 16px" data-act="newexFrom" data-q=""><span class="addb">${ic('plus', 'sm')}</span><span class="grow"><b class="t14">Can't find it?</b><small>Create your own; it uses one of the 7 log types</small></span>${ic('chev', 'sm')}</button>`;
   return h;
 }
@@ -689,3 +733,101 @@ A.saveWorkout = () => {
   nav('log', {}, {replace: true});
   toast(`Saved: ${w.title}`);
 };
+
+/* ---------- A1: this machine's weight step ---------- */
+A.exstep = d => { const s = D.session(), it = curItem(s); savePref(it.exId, {step: +d.v}); D._ex.clear(); renderSheet(); render(); };
+
+/* ---------- A2: type any weight ---------- */
+let KGV = null;
+A.typeKg = () => { const s = D.session(), it = s && curItem(s), i = it ? curIdx(it) : -1; if (i < 0) return; KGV = String(it.sets[i].kg ?? ''); openSheet('kg'); };
+function kgNote(v) {
+  const s = D.session(), it = curItem(s), e = D.ex(it.exId), st = D.settings(), kg = parseFloat(v);
+  if (!(kg > 0)) return 'Type a weight in kg.';
+  if (e.logType === 'barbell') { const bar = L.barFor(e, st); if (kg < bar) return `Lighter than the ${fmt(bar)} kg bar.`; const sp = L.splitPlates((kg - bar) / 2, L.plateSet(st)); return sp.rest ? `Your plates make ${fmt(kg - sp.rest * 2)} kg, not ${fmt(kg)}. Saved as typed.` : `Per side ${sp.plates.join(' + ') || 'nothing'}.`; }
+  if (e.logType === 'rack' && e.variant === 'dumbbell' && !L.dumbbellRange(st).includes(kg)) return 'Not on your dumbbell rack (Equipment). Saved as typed.';
+  return '';
+}
+SHEETS.kg = {title: 'Type a weight', render() {
+  return `<div class="hd"><h3>Weight</h3></div><label class="card fld"><small>Kilograms</small><input data-in="kgv" type="number" inputmode="decimal" step="any" min="0" max="999" value="${esc(KGV)}" autofocus></label>
+    <p class="lede" data-kgnote>${esc(kgNote(KGV))}</p><button class="btn" style="margin-top:14px" data-act="kgSave">${ic('check')}Use this weight</button>`;
+}, bind(el) { const i = $('[data-in="kgv"]', el); if (i) setTimeout(() => i.select(), 80); i && i.addEventListener('keydown', ev => { if (ev.key === 'Enter') A.kgSave(); }); }};
+IN.kgv = v => { KGV = v; const n = $('[data-kgnote]'); if (n) n.textContent = kgNote(v); };
+A.kgSave = () => { const kg = +(+parseFloat(KGV)).toFixed(2); if (!(kg > 0 && kg < 1000)) return toast('Type a weight in kg.'); closeSheet(); setTimeout(() => withCur((c, e, it, s, i) => { const b = c.kg; c.kg = kg; carry(it, i, 'kg', b, kg); }), 30); };
+
+/* ---------- A6: last time, every set ---------- */
+A.lastPeek = () => openSheet('last');
+SHEETS.last = {title: 'Last time', render() {
+  const s = D.session(), it = curItem(s), e = D.ex(it.exId), h = D.historyOf(e.id).slice(0, 3);
+  if (!h.length) return `<div class="hd"><h3>${esc(e.name)}</h3></div><p class="lede">First time logging this. Last time's sets show here from next session.</p>`;
+  return `<div class="hd"><h3>${esc(e.name)}</h3></div>${h.map((x, k) => `<div class="sec"><h5>${k ? esc(dDay(x.w.date)) : 'Last time, ' + esc(dDay(x.w.date))}</h5><span>${esc(x.w.title)}</span></div><div class="card list">${x.sets.map(y => `<div class="set"><span class="no">${typeLetter(y.type) || ''}</span><span>${setLong(y, e)}</span><span class="nt">${esc(y.note || '')}</span></div>`).join('')}</div>`).join('')}`;
+}};
+
+/* ---------- A7: swipe left / right on the Log screen for the next / previous exercise ---------- */
+(function () {
+  let x0 = null, y0 = 0, t0 = 0;
+  document.addEventListener('pointerdown', ev => {
+    x0 = null;
+    if (ev.pointerType === 'mouse' || S.view !== 'log' || S.sheet || !D.session()) return;
+    if (ev.target.closest('[data-strip], .sets2, input, textarea, .seg, .ssc, .chips, .chipz, #dock')) return;
+    x0 = ev.clientX; y0 = ev.clientY; t0 = Date.now();
+  }, {passive: true});
+  document.addEventListener('pointerup', ev => {
+    if (x0 == null) return; const dx = ev.clientX - x0, dy = ev.clientY - y0; x0 = null;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > 45 || Date.now() - t0 > 600) return;
+    const s = D.session(), k = s.items.indexOf(curItem(s)) + (dx < 0 ? 1 : -1), nx = s.items[k];
+    if (!nx) { vib(4); return; }
+    s.cur = nx.uid; D.saveSession(s); vib(8); render(); window.scrollTo(0, 0);
+  }, {passive: true});
+})();
+
+/* ---------- B: rest over works like an alarm clock ---------- */
+const ALARM = {open: false, ring: null, ringUntil: 0};
+function alarmEl() { let el = document.getElementById('alarm'); if (!el) { el = document.createElement('div'); el.id = 'alarm'; document.body.appendChild(el); } return el; }
+function showAlarm(ago) {
+  const s = D.session(); if (!s) return;
+  ALARM.open = true;
+  const it = curItem(s), e = it && D.ex(it.exId), i = it ? curIdx(it) : -1, nx = i >= 0 ? it.sets[i] : null, st = D.settings();
+  const next = e && nx ? `<div class="card alarm-next"><div class="lbl">Up next, ${esc(setPill(s, it, e, i).toLowerCase())}</div><div class="alarm-row"><b>${esc(e.name)}</b><b class="serif">${setShort(nx, e)}</b></div>${e.logType === 'barbell' ? `<div style="margin-top:6px">${barSVG(nx.kg, L.barFor(e, st), e.variant)}</div>` : ''}</div>` : (e ? `<div class="card alarm-next"><div class="lbl">Next</div><div class="alarm-row"><b>${esc(e.name)}</b></div></div>` : '');
+  const el = alarmEl();
+  el.innerHTML = `<div class="alarm" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="alarmT" aria-describedby="alarmD">
+    <div class="alarm-in"><div class="alarm-ring" aria-hidden="true">${ic('bell')}</div>
+    <h2 id="alarmT" class="alarm-h">Rest over</h2><p id="alarmD" class="lede alarm-ago">${ago ? `Ended ${mmss(ago)} ago.` : 'Time for the next set.'}</p>
+    ${next}
+    <div class="slide" data-slide><span class="slide-txt">Slide to lift</span><button class="knob" data-knob aria-label="Slide to lift. Or press and hold, or press Enter.">${ic('chev')}</button></div>
+    <button class="btn2 alarm-snooze" data-act="alarmSnooze">${ic('timer', 'sm')}+30 s more rest</button></div></div>`;
+  el.classList.add('open');
+  bindSlide($('[data-slide]', el));
+  /* ring: bell and buzz every 2.5 s until dismissed, for up to a minute */
+  clearInterval(ALARM.ring); ALARM.ringUntil = Date.now() + 60000;
+  const ring = () => { if (!ALARM.open || Date.now() > ALARM.ringUntil || document.hidden) return; bell(); vibAlarm([300, 120, 300]); };
+  ring(); ALARM.ring = setInterval(ring, 2500);
+  setTimeout(() => { const d = $('.alarm', el); d && d.focus({preventScroll: true}); }, 60); /* announce it; Tab reaches the knob */
+}
+function closeAlarm() { ALARM.open = false; clearInterval(ALARM.ring); try { navigator.vibrate && navigator.vibrate(0); } catch (e) {} const el = alarmEl(); el.classList.remove('open'); el.innerHTML = ''; }
+function dismissAlarm() {
+  const s = D.session(); if (s) { s.rest = null; D.saveSession(s); }
+  closeAlarm(); vib(20);
+  if (S.view !== 'log') nav('log'); else { render(); window.scrollTo(0, 0); }
+}
+A.alarmSnooze = () => { const s = D.session(); if (s) { s.rest = {end: Date.now() + 30000, total: 30, rang: false}; D.saveSession(s); } closeAlarm(); tick(); toast('30 s more rest'); };
+function bindSlide(track) {
+  if (!track) return;
+  const knob = $('[data-knob]', track);
+  let x0 = 0, dx = 0, max = 0, dragging = false, holdT = null;
+  const set = v => { knob.style.transform = `translateX(${v}px)`; track.style.setProperty('--p', max ? v / max : 0); };
+  knob.addEventListener('pointerdown', ev => {
+    ev.preventDefault(); try { knob.setPointerCapture(ev.pointerId); } catch (e) {}
+    max = track.clientWidth - knob.offsetWidth - 8; x0 = ev.clientX; dx = 0; dragging = true; knob.style.transition = 'none';
+    holdT = setTimeout(() => { if (dragging && Math.abs(dx) < 6) { dragging = false; dismissAlarm(); } }, 800); /* press and hold also works */
+  });
+  knob.addEventListener('pointermove', ev => { if (!dragging) return; dx = Math.max(0, Math.min(max, ev.clientX - x0)); if (Math.abs(dx) >= 6) clearTimeout(holdT); set(dx); });
+  const end = () => { if (!dragging) return; dragging = false; clearTimeout(holdT); if (dx >= max * 0.85) { set(max); dismissAlarm(); return; } knob.style.transition = ''; set(0); };
+  knob.addEventListener('pointerup', end); knob.addEventListener('pointercancel', end);
+  knob.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); dismissAlarm(); } });
+}
+
+/* ---------- C: favourites ---------- */
+function setFav(id, on) { savePref(id, {fav: on}); D._ex.clear(); }
+A.favTog = d => { const e = D.ex(d.id); setFav(d.id, !e.fav); vib(8); const b = document.getElementById('libbody'); if (b) { const sh = $('.sheet'), top = sh && sh.scrollTop; b.innerHTML = libBody(S.sp); if (sh) sh.scrollTop = top; } else render(); };
+A.favCur = () => { const s = D.session(), it = curItem(s), e = D.ex(it.exId); setFav(e.id, !e.fav); renderSheet(); };
+A.startFav = d => { if (D.session()) return toast('A workout is already running.'); S.sheet = null; startWorkout({title: 'Workout', items: [{exId: d.id, sets: 3}]}); };

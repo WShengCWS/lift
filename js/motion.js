@@ -134,7 +134,7 @@ if (logSet) A.logSet = (d, el, e) => {
   if (calm() || !from) return;
   raf(() => {
     const cur = document.querySelector('.sets2 .cur');
-    const done = cur ? cur.previousElementSibling : [...document.querySelectorAll('.sets2 button:not(.n)')].pop();
+    const done = (cur && cur.previousElementSibling) || [...document.querySelectorAll('.sets2 [data-act="tile"]:not(.n):not(.cur)')].pop(); /* never the + tile */
     const b = document.querySelector('.logb');
     if (b) { b.classList.remove('ok'); void b.offsetWidth; b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 700);
       [...b.children].forEach(c => c.classList.add('swap-in')); }
