@@ -291,7 +291,7 @@ Open with the gear on Home.
 ### 12. Backups and moving phones
 
 - **Export**: Settings › Sync and data › **Export backup** (or the download icon in History) saves one `.json` file with everything: workouts, templates, custom exercises, weigh-ins and settings. Keep it somewhere safe, like your cloud drive.
-- **Import**: Settings › **Import backup**, then pick the file. LIFT shows what will come in before anything changes. It **merges**: workouts already here stay, duplicates are skipped. Old LIFT 5 backups work too; exercise names LIFT doesn't know get a review step where you match each one to a built-in exercise or keep it as your own.
+- **Import**: Settings › **Import backup**, then pick the file. LIFT shows what will come in before anything changes. It **merges**: workouts already here stay, duplicates are skipped, and workouts you deleted on the phone come back from the file. Old LIFT 5 backups work too; exercise names LIFT doesn't know get a review step where you match each one to a built-in exercise or keep it as your own.
 - **New phone**: export on the old phone, send the file to yourself, install LIFT on the new phone, and choose **Import it** on the welcome screen.
 - **Clear all data** asks twice and saves a backup first.
 
@@ -334,6 +334,22 @@ python3 -m http.server 8000
 Then open http://localhost:8000. To host it, upload these files to GitHub Pages or Cloudflare Pages. All paths are relative, so it also works from a sub-folder.
 
 After changing any file, bump `VERSION` in `sw.js` so installed copies pick up the update.
+
+To test, from the source folder (the tests are not part of the published app; Node 22+, and the browser tests also need Google Chrome and use made-up sample data):
+
+```bash
+node tests/run.js && node tests/sw-check.js
+```
+
+```bash
+node tests/e2e/scenarios.js
+```
+
+```bash
+sh tests/e2e/crawl-all.sh
+```
+
+`run.js` checks the logic and storage, `sw-check.js` the offline cache, `scenarios.js` walks through every feature in English and Chinese and checks what gets saved, and `crawl-all.sh` presses every button on every screen in both languages, reporting crashes and any English left in the Chinese version.
 
 ## How it's built
 

@@ -540,8 +540,10 @@ A.discard = () => openSheet('confirm', {title: 'Discard this workout?', body: 'E
 A.discardYes = () => { Store.setOne('session', null); unwake(); S.sheet = null; nav('log', {}, {replace: true}); toast('Workout discarded'); };
 A.sessToTpl = () => { const s = D.session(); saveTemplateFrom(s.title, s.items.map(it => ({exId: it.exId, sets: Math.max(1, it.sets.filter(x => x.type !== 'warmup' && x.type !== 'drop').length), reps: (it.sets.find(x => x.type === 'working') || {}).reps || 0, link: !!it.link}))); };
 function saveTemplateFrom(name, items) {
-  const exists = D.templates().find(t => t.name.toLowerCase() === String(name).toLowerCase());
-  const t = Store.put('templates', {id: exists ? exists.id : Store.uid('tpl'), name: exists ? name + ' (new)' : name, items, lastUsed: Date.now()});
+  /* never overwrite: a name already in use gets " (2)", " (3)" … */
+  const taken = new Set(D.templates().map(t => t.name.toLowerCase()));
+  let nm = String(name || 'Workout'), k = 1; while (taken.has(nm.toLowerCase())) nm = `${name} (${++k})`;
+  const t = Store.put('templates', {id: Store.uid('tpl'), name: nm, items, lastUsed: Date.now()});
   toast(`Saved template "${t.name}"`);
 }
 
@@ -653,7 +655,7 @@ function libBody(sp) {
   const row = (e, act = 'libPick') => { const l = D.lastOf(e.id); const top = l ? l.sets.filter(x => x.type !== 'warmup').pop() : null; return `<div class="librow"><button class="row" data-act="${act}" ${act === 'go' ? 'data-v="newex"' : ''} data-id="${esc(e.id)}"><span class="addb" aria-hidden="true">${ic(TYPEICON[e.logType] || 'bar', 'sm')}</span><span class="grow"><b>${esc(e.name)}${e.custom ? ' <span class="tag w" style="font-size:10px">yours</span>' : ''}</b><small>${esc(L.TYPE_LABEL[e.logType])}${e.variant && L.VARIANT_LABEL[e.variant] ? ', ' + esc(L.VARIANT_LABEL[e.variant]) : ''}${e.unilateral ? ', one side' : ''}, ${top ? 'last ' + setShort(top, e) : 'never logged'}</small></span><span class="addb" aria-hidden="true">${ic(act === 'go' ? 'edit' : sp.m === 'progress' || sp.m === 'compare' ? 'chev' : 'plus', 'sm')}</span></button><button class="star ${e.fav ? 'on' : ''}" data-act="favTog" data-id="${esc(e.id)}" aria-pressed="${e.fav}" aria-label="${e.fav ? 'Remove from' : 'Add to'} favourites: ${esc(e.name)}">${ic('star', 'sm')}</button></div>`; };
   if (!list.length) return q ? `<div class="card empty" style="margin-top:12px"><b>No match for "${esc(LIB.q)}"</b><p class="lede">Create it once and it logs like any built-in exercise.</p><button class="btn" style="margin-top:12px" data-act="newexFrom" data-q="${esc(LIB.q)}">${ic('plus', 'sm')}Create "${esc(LIB.q)}"</button></div>` : `<p class="lede" style="margin-top:14px">Nothing logged yet.</p>`;
   let h = '';
-  if (sp.m === 'progress' && !q && LIB.g === 'All') h += `<div class="card list" style="margin-top:12px"><button class="row" data-act="progBw"><span class="addb" aria-hidden="true">${ic('scale', 'sm')}</span><span class="grow"><b>Bodyweight</b><small>weekly weigh-ins, ${D.weighins().length} so far</small></span>${ic('chev', 'sm')}</button></div>`;
+  if (sp.m === 'progress' && !q && LIB.g === 'All') h += `<div class="card list" style="margin-top:12px"><button class="row" data-act="progBw"><span class="addb" aria-hidden="true">${ic('scale', 'sm')}</span><span class="grow"><b data-body>Bodyweight</b><small>weekly weigh-ins, ${D.weighins().length} so far</small></span>${ic('chev', 'sm')}</button></div>`;
   if (!q && LIB.g === 'All') {
     /* favourites first, then anything imported with an unclear muscle, then recent */
     const favs = list.filter(e => e.fav);

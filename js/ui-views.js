@@ -79,7 +79,7 @@ A.wiLog = () => {
 };
 A.wiSkip = () => { D.setMeta({wiSkip: L.weekStartOf(today(), D.settings().weekStart)}); render(); };
 A.weighSheet = () => { WI.bw = D.latestBw(); openSheet('weighin'); };
-SHEETS.weighin = {title: 'Weigh-in', render() { if (WI.bw == null) WI.bw = D.latestBw(); return `<div class="hd"><h3>Bodyweight</h3><b class="serif" style="font-size:40px" data-wv>${WI.bw.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div><p class="lede">Used for pull-ups, dips and push-ups, and the line in Progress.</p><div class="card vis">${weighStrip(WI.bw)}</div><button class="btn" style="margin-top:14px" data-act="wiLog">${ic('check')}<span data-wl>Log ${WI.bw.toFixed(1)} kg</span></button>`; }};
+SHEETS.weighin = {title: 'Weigh-in', render() { if (WI.bw == null) WI.bw = D.latestBw(); return `<div class="hd"><h3 data-body>Bodyweight</h3><b class="serif" style="font-size:40px" data-wv>${WI.bw.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div><p class="lede">Used for pull-ups, dips and push-ups, and the line in Progress.</p><div class="card vis">${weighStrip(WI.bw)}</div><button class="btn" style="margin-top:14px" data-act="wiLog">${ic('check')}<span data-wl>Log ${WI.bw.toFixed(1)} kg</span></button>`; }};
 function slipping(ws, t) {
   const out = [], byT = {};
   ws.slice().reverse().forEach(w => (byT[w.title] = byT[w.title] || []).push(w.date));
@@ -231,7 +231,7 @@ VIEWS.progress = {dock: true, render() {
     ${ms.length > 1 ? `<div class="seg wide" style="margin-top:10px" role="radiogroup">${ms.map(([k, l]) => `<button class="${PROG.metric === k ? 'on' : ''}" data-act="pmetric" data-v="${k}" role="radio" aria-checked="${PROG.metric === k}">${l}</button>`).join('')}</div>` : ''}
     <div class="card" style="margin-top:10px;padding:16px">
       ${last ? `<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><b class="serif" style="font-size:60px;line-height:1">${showV(last.y)}</b><span style="font-weight:700;color:var(--soft)">${UNIT[PROG.metric]}</span>${pts.length > 1 && ch ? `<span class="tag ${better ? '' : 'w'}" style="margin-left:auto">${PROG.metric === 'pace' ? (ch < 0 ? '−' : '+') + mmss(Math.abs(ch) * 60) : signed(+ch.toFixed(1)) + ' ' + UNIT[PROG.metric]} in ${wk} wk</span>` : ''}</div>
-      ${pts.length > 1 ? lineChart(pts, {label: `${e.name} ${PROG.metric}`, dashed: cmp}) + axisLabels(pts[0].x, last.x) : `<p class="lede">One session so far. The line starts with the second.</p>`}
+      ${pts.length > 1 ? lineChart(pts, {label: `${e.name}, ${((ms.find(m => m[0] === PROG.metric) || [])[1] || '').toLowerCase()}`, dashed: cmp}) + axisLabels(pts[0].x, last.x) : `<p class="lede">One session so far. The line starts with the second.</p>`}
       <div class="legend"><span><i style="background:var(--ok)"></i>personal record</span>${cmp && cmp.length > 1 ? `<span><i style="background:var(--soft)"></i>${esc(exOf(PROG.cmp).name)} (dashed)</span>` : ''}</div>` : '<p class="lede">No data for this measure yet.</p>'}
     </div>
     <div class="chips"><button class="chip" data-act="library" data-m="compare">${ic('plus', 'xs')} Compare</button>${PROG.cmp ? `<button class="chip on" data-act="pcmp" data-id="">${esc(exOf(PROG.cmp).name)} ${ic('x', 'xs')}</button>` : sameMuscle.map(id => `<button class="chip" data-act="pcmp" data-id="${esc(id)}">${esc(exOf(id).name)}</button>`).join('')}</div>
@@ -345,7 +345,7 @@ function bwProgress() {
   let wi = all.filter(x => x.date >= cut); if (wi.length < 2) wi = all;
   const pts = wi.map(x => ({x: L.parseDate(x.date).getTime(), y: x.kg})), l = wi[wi.length - 1], ch = wi.length > 1 ? +(l.kg - wi[0].kg).toFixed(1) : 0;
   return `<div class="hd"><div><p>${PROG.range === '12w' ? '12 weeks' : PROG.range === '6m' ? '6 months' : 'All time'}</p><h3 class="pt">Progress</h3></div></div>
-    <button class="card row" style="margin-top:14px;padding:12px 16px;border-bottom:1px solid var(--edge)" data-act="library" data-m="progress"><span class="grow"><b style="font-size:17px">Bodyweight</b></span>${ic('down')}</button>
+    <button class="card row" style="margin-top:14px;padding:12px 16px;border-bottom:1px solid var(--edge)" data-act="library" data-m="progress"><span class="grow"><b style="font-size:17px" data-body>Bodyweight</b></span>${ic('down')}</button>
     <div class="card" style="margin-top:10px;padding:16px">${l ? `<div style="display:flex;align-items:baseline;gap:8px"><b class="serif" style="font-size:60px;line-height:1">${fmt(l.kg.toFixed(1))}</b><span style="font-weight:700;color:var(--soft)">kg</span>${ch ? `<span class="tag w" style="margin-left:auto">${signed(ch)} kg in ${Math.max(1, Math.round((pts[pts.length - 1].x - pts[0].x) / 6048e5))} wk</span>` : ''}</div>
     ${pts.length > 1 ? lineChart(pts, {label: `Bodyweight from ${wi[0].kg} to ${l.kg} kg`}) + axisLabels(pts[0].x, pts[pts.length - 1].x) : '<p class="lede">The line starts with your second weekly weigh-in.</p>'}` : '<p class="lede">No weigh-ins yet.</p>'}
     <p class="lede" style="margin-top:10px">Logged once a week from Home. Pull-ups, dips and push-ups use the latest weigh-in.</p></div>
@@ -370,7 +370,7 @@ VIEWS.settings = {dock: false, render() {
   const st = D.settings(), meta = D.meta();
   const RW = (icn, t, sub, v, act) => `<button class="row" ${act}><span class="addb">${ic(icn, 'sm')}</span><span class="grow"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${valc(v)}</button>`;
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Settings</h3>
-  <div class="sec"><h5>You</h5></div><div class="card list">${RW('scale', 'Bodyweight', 'Weekly weigh-in; used for pull-ups, dips, push-ups', kgs(D.latestBw()), 'data-act="weighSheet"')}${RW('user', 'Name on Home', '', esc(st.name || 'not set'), 'data-act="textSheet" data-k="name"')}</div>
+  <div class="sec"><h5>You</h5></div><div class="card list">${RW('scale', '<span data-body>Bodyweight</span>', 'Weekly weigh-in; used for pull-ups, dips, push-ups', kgs(D.latestBw()), 'data-act="weighSheet"')}${RW('user', 'Name on Home', '', esc(st.name || 'not set'), 'data-act="textSheet" data-k="name"')}</div>
   <div class="sec"><h5>Appearance</h5></div><div class="card list">${sr('Theme', segb('theme', [['light', `${ic('sun', 'sm')}Light`], ['dark', `${ic('moon', 'sm')}Dark`], ['device', `${ic('phone', 'sm')}Device`]], st.theme))}${sr('Reduce glass', tog('reduceGlass', st.reduceGlass, 'Reduce glass'), 'Solid cards instead of frosted glass. Also turns on by itself when the battery is low.')}${sr('Text size', valc(st.textSize === 'large' ? 'Large' : 'Default'), '', 'data-act="pick" data-k="textSize"')}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}</div>
   <div class="sec"><h5>Units and weights</h5></div><div class="card list">${sr('Units', '<span class="val">kg, km</span>', 'lbs and miles come later')}${RW('ruler', 'Weight steps', 'Barbell / dumbbells / stacks', `${fmt(st.steps.barbell)} / ${fmt(st.steps.dumbbell)} / ${fmt(st.steps.stack)}`, 'data-act="go" data-v="steps"')}${RW('bar', 'Equipment', 'Bars, plates, dumbbells, machines, bands', 'Edit', 'data-act="go" data-v="equip"')}</div>
   <div class="sec"><h5>Logging</h5></div><div class="card list">${sr("Fill in last time's numbers", tog('fillLast', st.fillLast))}${sr('Warm-up sets', valc(st.warmups === 'off' ? 'Off' : 'Ask'), 'Shows "Add warm-ups": bar, 50, 70, 85%', 'data-act="pick" data-k="warmups"')}${sr('Drop sets', valc('−' + st.drop + '%'), 'Each drop takes this much off, rounded to the step', 'data-act="pick" data-k="drop"')}${sr('RPE', tog('rpe', st.rpe), 'Rate each set 6 to 10 (optional)')}${sr('PR alerts', tog('prAlerts', st.prAlerts))}${sr('Haptics', tog('haptics', st.haptics), 'Tick on swipe, buzz on Log set')}${sr('Keep screen awake', tog('keepAwake', st.keepAwake), 'During a workout')}</div>
@@ -381,7 +381,7 @@ VIEWS.settings = {dock: false, render() {
   <div class="sec"><h5>App</h5></div><div class="card list">${INSTALL && !standalone() ? sr('Install LIFT', ic('install', 'sm'), 'Add to your home screen', 'data-act="install"') : ''}${sr('About', '<span class="val">v2.0</span>', `${L.EX.length} built-in exercises, data stays on this phone`)}</div>`;
 }};
 A.toggle = d => { const st = D.settings(); D.saveSettings({[d.k]: !st[d.k]}); applyTheme(); if (d.k === 'keepAwake') { st.keepAwake ? unwake() : wake(); } render(); };
-A.lang = d => { const was = D.settings().lang; D.saveSettings({lang: d.v}); if (d.v === was) return; if (d.v === 'en') { try { sessionStorage.setItem('lift_view', 'settings'); } catch (e) {} location.reload(); return; } I18N.setLang(d.v); render(); };
+A.lang = d => { if (d.v === D.settings().lang) return; D.saveSettings({lang: d.v}); I18N.setLang(d.v); render(); };
 A.theme = d => { D.saveSettings({theme: d.v}); applyTheme(); render(); };
 A.formula = d => { D.saveSettings({formula: d.v}); render(); };
 A.install = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) {} INSTALL = null; render(); };
@@ -456,6 +456,7 @@ A.plateTog = d => { const st = D.settings(), k = +d.k; if (k < 1 && !st.micro) {
 A.kbTog = d => { const st = D.settings(), k = +d.k; const ks = st.kettlebells.includes(k) ? st.kettlebells.filter(x => x !== k) : st.kettlebells.concat(k).sort((a, b) => a - b); if (!ks.length) return; D.saveSettings({kettlebells: ks}); render(); };
 let EQ = null;
 const BANDCOL = ['#f2c230', '#d7263d', '#7a4fd8', '#2a9d5c', '#1e5bd8', '#15161b', '#f08c1e', '#9aa1ad'];
+const COLNAME = {'#f2c230': 'Yellow', '#d7263d': 'Red', '#7a4fd8': 'Purple', '#2a9d5c': 'Green', '#1e5bd8': 'Blue', '#15161b': 'Black', '#f08c1e': 'Orange', '#9aa1ad': 'Grey'};
 A.eqEdit = d => {
   const st = D.settings();
   if (d.t === 'db') EQ = {t: 'db', min: st.dbMin, max: st.dbMax};
@@ -476,7 +477,7 @@ SHEETS.eq = {title: 'Equipment', render() {
     body += `<div class="card list" style="margin-top:10px">${sr('Weight step', segb('eqStep', [2.5, 5, 10].map(x => [x, fmt(x)]), v.step))}</div>`;
     if (v.kind === 'plates') body += `<p class="lede">Plate-loaded exercises pick the machine whose name matches (for example "Leg press"), or set it under the exercise.</p>`;
   }
-  if (EQ.t === 'band') body += `<div class="sec"><h5>Colour</h5></div><div class="chipz">${BANDCOL.map(c => `<button aria-label="Colour ${c}" data-act="eqF" data-f="color" data-v="${c}" class="${v.color === c ? 'on2' : ''}" style="background:${c};min-width:40px"></button>`).join('')}</div><div class="steps">${stepper('About kg', fmt(v.kg), 'eq', 'data-f="kg"')}</div>`;
+  if (EQ.t === 'band') body += `<div class="sec"><h5>Colour</h5></div><div class="chipz">${BANDCOL.map(c => `<button aria-label="${COLNAME[c] || c}" aria-pressed="${v.color === c}" data-act="eqF" data-f="color" data-v="${c}" class="${v.color === c ? 'on2' : ''}" style="background:${c};min-width:40px"></button>`).join('')}</div><div class="steps">${stepper('Resistance (kg)', fmt(v.kg), 'eq', 'data-f="kg"')}</div>`;
   return `<div class="hd"><h3>${esc(EQ.isNew ? 'Add ' + EQ.t : v.name)}</h3><button class="btn2" style="flex:0 0 auto;height:40px" data-act="eqSave">Save</button></div>${body}${!EQ.isNew && !used ? `<div class="btns" style="margin-top:14px"><button class="btn2 danger" data-act="eqDel">${ic('trash', 'sm')}Remove</button></div>` : ''}`;
 }};
 STEP.eq = (dir, ds) => {
@@ -603,7 +604,7 @@ VIEWS.setup = {dock: false, render() {
   WI.bw = SETUP.bw;
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Quick setup</h3><p class="lede">Three things, then you're lifting. All of it can change later in Settings.</p>
   <label class="card fld"><small>Your name (for home)</small><input data-in="suname" value="${esc(SETUP.name)}" maxlength="30" placeholder="optional" autocomplete="given-name"></label>
-  <div class="card" style="margin-top:12px;padding:14px 16px 10px"><div class="hd"><div><b style="font-size:15px;font-weight:800">Bodyweight</b><p>for pull-ups, dips and push-ups</p></div><b class="serif" style="font-size:40px" data-wv>${(+SETUP.bw).toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div>${strip('su', range(40, 140, .5), +SETUP.bw, v => fmt(v), 'small', 'Bodyweight')}</div>
+  <div class="card" style="margin-top:12px;padding:14px 16px 10px"><div class="hd"><div><b style="font-size:15px;font-weight:800" data-body>Bodyweight</b><p>for pull-ups, dips and push-ups</p></div><b class="serif" style="font-size:40px" data-wv>${(+SETUP.bw).toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div>${strip('su', range(40, 140, .5), +SETUP.bw, v => fmt(v), 'small', 'Bodyweight')}</div>
   <div class="card list" style="margin-top:12px">${sr('Bar weight', segb('suBar', [[20, '20'], [15, '15']], SETUP.bar), 'Your usual Olympic bar, kg')}${sr('Theme', segb('suTheme', [['light', 'Light'], ['dark', 'Dark'], ['device', 'Device']], SETUP.theme))}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}${sr('Units', '<span class="val">kg, km</span>')}</div>
   <button class="btn" style="margin-top:20px" data-act="suDone">Start lifting</button>`;
 }};
@@ -693,8 +694,8 @@ A.doImport = () => {
     const fit = L.fitEquipment(out, D.settings()); if (Object.keys(fit.patch).length) D.saveSettings(fit.patch);
   } else {
     const d = IMP.plan.data;
-    n = Store.merge('workouts', d.workouts || []).added;
-    for (const c of ['exercises', 'exprefs', 'templates', 'weighins']) if (Array.isArray(d[c])) Store.merge(c, d[c]);
+    n = Store.merge('workouts', (d.workouts || []).filter(r => !r.deleted), {revive: true}).added;
+    for (const c of ['exercises', 'exprefs', 'templates', 'weighins']) if (Array.isArray(d[c])) Store.merge(c, d[c].filter(r => !r.deleted), {revive: true});
     if (IMP.withSettings && d.settings) D.saveSettings(L.mergeSettings(d.settings));
   }
   const w = D.weighins(); if (w.length) D.saveSettings({bw: w[w.length - 1].kg});
@@ -729,8 +730,6 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   Store.persist();
   S.view = defaultView();
   history.replaceState({v: S.view, p: {}}, '');
-  /* after switching back to English the page reloads; land on Settings again */
-  try { const v = sessionStorage.getItem('lift_view'); if (v) { sessionStorage.removeItem('lift_view'); history.pushState({v, p: {}}, ''); S.view = v; } } catch (e) {}
   render();
   if (D.session()) wake();
 })();

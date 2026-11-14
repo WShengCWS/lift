@@ -59,14 +59,15 @@ const Store = {
     return old;
   },
   /* bring records in from a backup or (later) the server: newer updatedAt wins, existing ids are kept otherwise */
-  merge(col, recs, {overwrite = false} = {}) {
+  /* revive: a record in a backup file brings back one deleted on this phone (otherwise the newer copy wins) */
+  merge(col, recs, {overwrite = false, revive = false} = {}) {
     const arr = read(col, []);
     let added = 0, skipped = 0;
     for (const r of recs) {
       if (!r || typeof r.id !== 'string') continue;
       const i = arr.findIndex(x => x && x.id === r.id);
       if (i < 0) { arr.push(Object.assign({updatedAt: now()}, r)); added++; }
-      else if (overwrite || (r.updatedAt || 0) > (arr[i].updatedAt || 0)) { arr[i] = Object.assign({updatedAt: now()}, r); added++; }
+      else if (overwrite || (revive && arr[i].deleted && !r.deleted) || (r.updatedAt || 0) > (arr[i].updatedAt || 0)) { arr[i] = Object.assign({updatedAt: now()}, r); added++; }
       else skipped++;
     }
     write(col); emit(col);

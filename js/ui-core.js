@@ -77,12 +77,14 @@ function openSheet(name, sp = {}) {
   replace ? history.replaceState(st, '') : history.pushState(st, '');
   renderSheet(true);
 }
-function closeSheet() { if (S.sheet) { if (history.state && history.state.s) history.back(); else { S.sheet = null; renderSheet(); } } }
+function closeSheet() { if (S.sheet) { if (history.state && history.state.s) history.back(); else { S.sheet = null; renderSheet(); render(); } } }
 window.addEventListener('popstate', e => {
   const st = e.state || {v: defaultView(), p: {}};
   const sameView = st.v === S.view && JSON.stringify(st.p || {}) === JSON.stringify(S.p);
+  const hadSheet = !!S.sheet;
   S.view = st.v; S.p = st.p || {}; S.sheet = st.s || null; S.sp = st.sp || {};
-  if (sameView) renderSheet(); else { render(); window.scrollTo(0, 0); }
+  /* closing a sheet redraws the screen under it too, so changes made in the sheet show at once */
+  if (sameView) { renderSheet(); if (hadSheet && !S.sheet) render(); } else { render(); window.scrollTo(0, 0); }
 });
 function defaultView() { return Store.one('meta', {}) && (Store.one('meta', {}) || {}).setup ? 'log' : 'welcome'; }
 
@@ -95,6 +97,8 @@ function render() {
   catch (err) { console.error(err); html = `<div class="card empty" style="margin-top:40px"><b>Something went wrong on this screen.</b><p class="lede">${esc(err.message)}</p><button class="btn" style="margin-top:14px" data-act="go" data-v="log">Back to Log</button></div>`; }
   view.innerHTML = html;
   view.classList.toggle('nodock', !v.dock);
+  /* the Log screen keeps sideways swipes for itself (next / previous exercise); the browser only scrolls it up and down */
+  view.classList.toggle('logv', S.view === 'log' && !!D.session());
   renderDock(v.dock);
   if (v.bind) try { v.bind(view); } catch (err) { console.error(err); }
   bindStrips(view);
@@ -150,6 +154,9 @@ document.addEventListener('pointerdown', () => audio(), {once: true});
 
 /* ---------- events: clicks, inputs, steppers with hold-to-repeat ---------- */
 document.addEventListener('click', e => {
+  /* steppers move on pointerdown (hold to repeat) and Enter; a click with no pointer behind it (VoiceOver, Voice Control, Switch Control) steps once */
+  const sp = e.target.closest('[data-step]');
+  if (sp && !sp.hasAttribute('data-act')) { if (e.detail === 0 && STEP[sp.dataset.step]) { STEP[sp.dataset.step](+sp.dataset.dir, Object.assign({}, sp.dataset), 1); vib(5); } return; }
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
   if (el.hasAttribute('data-step') && e.detail !== 0) return;
