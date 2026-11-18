@@ -74,6 +74,8 @@ const I18N = (() => {
   const D = s => s; /* keep numbers, names and units as they are */
   const GREET = {'Good morning': '早上好', 'Good afternoon': '下午好', 'Good evening': '晚上好'};
   const PAT = [
+    [/^tap a plate or drag the pin, (.+) kg steps( \(from your history\))?\. Change the step: tap the name$/, m => `点一片或拖动插销选重量，每档 ${m[1]} kg${m[2] ? '（根据你的记录）' : ''}。点动作名称可修改档位`],
+    [/^pin (\d+), (.+) kg$/, m => `插第 ${m[1]} 片，${m[2]} kg`],
     [/^([\d/]+) reps?$/, m => `${m[1]} 次`],
     [/^Logged (\d\d?:\d\d)$/, m => `完成于 ${m[1]}`],
     [/^of ([\d:]+)$/, m => `共 ${m[1]}`],

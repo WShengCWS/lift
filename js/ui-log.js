@@ -236,9 +236,9 @@ const LOGTYPE = {
       const per = Math.max(0, (c.kg - (m.sled || 0)) / 2), sp = L.splitPlates(per, L.plateSet(st));
       return `${bigKg(c.kg)}<div class="subw">${m.sled ? `sled ${fmt(m.sled)} kg + ${fmt(per)} per side` : `${fmt(per)} per side`}, ${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis">${machineSVG(per)}<div class="capx">per side ${sp.plates.join(' + ') || 'nothing'}${e.seat ? `, ${esc(e.seat)}` : ''}</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
     }
-    const step = L.stepFor(e, st), n = Math.min(40, Math.max(m.plates || 20, Math.ceil(c.kg / step) + 2));
-    const off = +((((+c.kg || 0) % step) + step) % step).toFixed(2) || step, top = Math.max(100, Math.ceil((c.kg * 1.6) / step) * step);
-    return `${bigKg(c.kg)}<div class="subw">pin ${Math.round(c.kg / step)}${e.seat ? `, ${esc(e.seat)}` : ''}, ${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis short">${stackSVG(c.kg, step, n)}${strip('kg', range(off, top, step), c.kg, v => fmt(v), 'small', 'Stack weight', c.id)}<div class="capx">swipe the stack, ${fmt(step)} kg steps${e.stepLearned ? ' (from your history)' : ''}. Change the step: tap the name</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
+    const step = L.stepFor(e, st);
+    const off = +((((+c.kg || 0) % step) + step) % step).toFixed(2) || step, n = Math.min(40, Math.max(m.plates || 20, Math.round(((+c.kg || 0) - off) / step) + 3));
+    return `${bigKg(c.kg)}<div class="subw">pin ${Math.round((c.kg - off) / step) + 1}${e.seat ? `, ${esc(e.seat)}` : ''}, ${lastBtn(e)}</div>${hintsRow(s, it, e, c)}<div class="card vis">${stackPicker('kg', c.kg, step, off, n, c.id)}<div class="capx">tap a plate or drag the pin, ${fmt(step)} kg steps${e.stepLearned ? ' (from your history)' : ''}. Change the step: tap the name</div></div>${repsSteppers(e, c, 'Weight', fmt(c.kg))}`;
   },
   bodyweight(s, it, e, c) {
     const st = D.settings(), bw = D.latestBw(), mode = c.mode || 'plain';
@@ -770,7 +770,7 @@ SHEETS.last = {title: 'Last time', render() {
   document.addEventListener('pointerdown', ev => {
     x0 = null;
     if (ev.pointerType === 'mouse' || S.view !== 'log' || S.sheet || !D.session()) return;
-    if (ev.target.closest('[data-strip], .sets2, input, textarea, .seg, .ssc, .chips, .chipz, #dock')) return;
+    if (ev.target.closest('[data-strip], [data-stackpick], .sets2, input, textarea, .seg, .ssc, .chips, .chipz, #dock')) return;
     x0 = ev.clientX; y0 = ev.clientY; t0 = Date.now();
   }, {passive: true});
   document.addEventListener('pointerup', ev => {

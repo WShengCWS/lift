@@ -343,3 +343,4 @@ html[data-theme=dark] .delta span{color:var(--on-ok)}
 /* Chinese: the display serif has no CJK, so headings fall back to a song face; keep tracking neutral */
 .lang-zh .pt,.lang-zh .ptl,.lang-zh .wwords>div,.lang-zh .fin h3,.lang-zh .alarm-h,.lang-zh .focus h4,.lang-zh .emptyc .et{letter-spacing:0}
 #view.logv{touch-action:pan-y pinch-zoom}
+.stackpick{touch-action:none;cursor:ns-resize;border-radius:16px;-webkit-user-select:none;user-select:none}.stackpick svg{display:block;width:100%;height:200px}

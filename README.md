@@ -136,7 +136,7 @@ This is where you spend the workout. Top to bottom:
 - **Exercise name** (tap for [exercise options](#5-during-the-workout)) and the equipment chip.
 - **The big weight.** Tap it to type any weight. Under it, **last 87.5 × 6** (tap to see the last three sessions) and a hint: **same as last time**, or **Try 90 kg +1 step** when you beat your reps last time (tap it to use it).
 - **The picture** shows how to load it: plates per side on the bar, the pin on a weight stack, the dumbbell, the band.
-- **Weight and Reps steppers**: tap − / + (hold to repeat). Machines and racks use a swipe strip in their own steps instead.
+- **Weight and Reps steppers**: tap − / + (hold to repeat). Dumbbells and kettlebells also have a swipe strip of your rack; cable and stack machines let you tap a plate on the stack or drag the pin, like the real machine.
 - **Set type**: Warm-up, Working, Drop, Failure.
 - **Log set: 87.5 × 6** saves the set, buzzes, and starts the rest timer. An **Undo** shows for a few seconds.
 - **Set tiles** along the bottom: done sets are solid, the current one is outlined, planned ones are dashed. Tap a tile to go to it or edit it; **press and hold** a planned set to remove it; **+** adds a set any time. Warm-ups get their own row above.
@@ -151,7 +151,7 @@ Each log type shows what it needs:
 |---|---|---|
 | Barbell | weight, reps | Plates per side are worked out from your bar and plate set |
 | Rack | weight, reps | Dumbbells (each hand), kettlebells or a single plate; swipe your rack's real weights |
-| Machine | weight, reps | Weight stack (swipe the pin) or plate-loaded (sled + plates) |
+| Machine | weight, reps | Cable and weight-stack machines: tap a plate on the stack or drag the pin. Plate-loaded: sled + plates |
 | Bodyweight | reps, and added or assisted kg | Plain, + weight (belt or vest) or assisted (band or machine) |
 | Band | band, reps | Pick the band colour; one side at a time logs left and right |
 | Timed | seconds | **Start hold** counts up; stop to log, or type the time |

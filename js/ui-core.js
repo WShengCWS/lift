@@ -101,7 +101,7 @@ function render() {
   view.classList.toggle('logv', S.view === 'log' && !!D.session());
   renderDock(v.dock);
   if (v.bind) try { v.bind(view); } catch (err) { console.error(err); }
-  bindStrips(view);
+  bindStrips(view); bindStackPicks(view);
   renderSheet();
   tick();
 }
@@ -116,7 +116,7 @@ function renderSheet(fresh) {
   const el = $('.sheet', layer);
   if (!fresh) el.scrollTop = top;
   if (sh.bind) try { sh.bind(el); } catch (err) { console.error(err); }
-  bindStrips(el);
+  bindStrips(el); bindStackPicks(el);
   if (fresh && !sh.noFocus) { const f = $('[autofocus]', el); if (f) setTimeout(() => f.focus(), 60); }
 }
 
@@ -268,19 +268,46 @@ function barSVG(total, bar, shape = 'olympic') {
   }
   return s + '</svg>';
 }
-function stackSVG(kg, step, n = 20) {
-  const W = 346, H = 220, ph = Math.min(8.4, 168 / n), top = 22, x0 = 128, w = 90, pin = Math.max(1, Math.min(n, Math.round(kg / step))), lift = -10, gap = Math.min(1.4, ph * .17);
+function stackSVG(kg, step, n = 20, off = step) {
+  const W = 346, H = 220, ph = Math.min(8.4, 168 / n), top = 22, x0 = 128, w = 90, pin = Math.max(1, Math.min(n, Math.round((kg - off) / step) + 1)), lift = -10, gap = Math.min(1.4, ph * .17);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight stack, pin in plate ${pin}, ${fmt(kg)} kg"><rect x="${x0 - 14}" y="6" width="4" height="${H - 12}" rx="2" fill="var(--frame)"/><rect x="${x0 + w + 10}" y="6" width="4" height="${H - 12}" rx="2" fill="var(--frame)"/>`;
   s += `<rect x="${x0 + w / 2 - 2}" y="0" width="4" height="${top + lift}" fill="var(--chrome2)"/><rect x="${x0 + w / 2 - 4}" y="${top + lift - 6}" width="8" height="${pin * (ph + gap) + 6}" rx="2" fill="var(--chrome2)" opacity=".8"/>`;
   const every = n > 24 ? 5 : 2;
   for (let i = 0; i < n; i++) {
     const on = i < pin, y = top + i * (ph + gap) + (on ? lift : 0);
     s += `<rect x="${x0}" y="${y}" width="${w}" height="${ph}" rx="2" fill="${on ? 'var(--stack-on)' : 'var(--stack)'}" opacity="${on ? 1 : .55}"/><rect x="${x0 + 2}" y="${y + 1}" width="${w - 4}" height="1.4" rx=".7" fill="#fff" opacity=".12"/>`;
-    if ((i + 1) % every === 0) s += `<text x="${x0 + w + 22}" y="${y + ph - 1}" font-family="Manrope" font-weight="800" font-size="8.5" fill="var(--soft)">${fmt((i + 1) * step)}</text>`;
+    if ((i + 1) % every === 0) s += `<text x="${x0 + w + 22}" y="${y + ph - 1}" font-family="Manrope" font-weight="800" font-size="8.5" fill="var(--soft)">${fmt(off + i * step)}</text>`;
   }
   const py = top + (pin - 1) * (ph + gap) + lift + ph / 2;
   s += `<rect x="${x0 - 44}" y="${py - 2}" width="${44 + w / 2}" height="4" rx="2" fill="var(--chrome2)"/><circle cx="${x0 - 46}" cy="${py}" r="9" fill="#d7263d"/><text x="${x0 - 62}" y="${py + 4}" text-anchor="end" font-family="Manrope" font-weight="800" font-size="11" fill="var(--ink)">pin ${pin}</text>`;
   return s + '</svg>';
+}
+/* the cable / machine weight stack as its own selector: tap a plate or drag the pin up and down the stack,
+   like pulling the pin on the real machine (dumbbells keep their rack strip). Plate p carries off + (p - 1) * step kg. */
+const STACK_GEO = {top: 22, area: 168};
+function stackPicker(key, kg, step, off, n, forId) {
+  const pin = Math.max(1, Math.min(n, Math.round(((+kg || 0) - off) / step) + 1)), last = off + (n - 1) * step;
+  return `<div class="stackpick" data-stackpick="${key}" data-for="${esc(forId)}" data-step="${step}" data-off="${off}" data-n="${n}" data-kg="${kg}" role="slider" tabindex="0" aria-label="Stack weight" aria-valuemin="${off}" aria-valuemax="${last}" aria-valuenow="${kg}" aria-valuetext="pin ${pin}, ${fmt(kg)} kg">${stackSVG(off + (pin - 1) * step, step, n, off)}</div>`;
+}
+function bindStackPicks(root) {
+  $$('[data-stackpick]', root).forEach(el => {
+    const key = el.dataset.stackpick, step = +el.dataset.step, off = +el.dataset.off, n = +el.dataset.n, init = +el.dataset.kg;
+    let cur = init, drag = false;
+    const kgOf = p => +(off + (Math.max(1, Math.min(n, p)) - 1) * step).toFixed(2);
+    const pinOf = v => Math.round((v - off) / step) + 1;
+    const show = v => { if (v === cur) return; cur = v; el.innerHTML = stackSVG(v, step, n, off); el.setAttribute('aria-valuenow', v); el.setAttribute('aria-valuetext', `pin ${pinOf(v)}, ${fmt(v)} kg`); vib(4); STRIP[key] && STRIP[key].live && STRIP[key].live(v, el); };
+    const done = () => { if (cur !== init && el.isConnected && STRIP[key]) STRIP[key].set(cur, el); };
+    /* which plate is under the finger: the drawing is 220 units tall, plates start at STACK_GEO.top */
+    const at = ev => { const svg = el.querySelector('svg'), r = svg.getBoundingClientRect(), y = (ev.clientY - r.top) / r.height * 220; const ph = Math.min(8.4, STACK_GEO.area / n), pitch = ph + Math.min(1.4, ph * .17); /* plates above the pin are drawn lifted by 10 */ const lifted = Math.floor((y - STACK_GEO.top + 10) / pitch) + 1; return kgOf(lifted <= pinOf(cur) ? lifted : Math.floor((y - STACK_GEO.top) / pitch) + 1); };
+    el.addEventListener('pointerdown', ev => { if (ev.button > 0) return; drag = true; try { el.setPointerCapture(ev.pointerId); } catch (e) {} show(at(ev)); });
+    el.addEventListener('pointermove', ev => { if (drag) show(at(ev)); });
+    const up = () => { if (!drag) return; drag = false; done(); };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('keydown', ev => {
+      const p = pinOf(cur), to = {ArrowUp: p - 1, ArrowLeft: p - 1, ArrowDown: p + 1, ArrowRight: p + 1, Home: 1, End: n}[ev.key];
+      if (to == null) return; ev.preventDefault(); show(kgOf(to)); clearTimeout(el._t); el._t = setTimeout(done, 400);
+    });
+  });
 }
 function machineSVG(perSide) {
   const W = 346, H = 150, cy = 78, {plates: ps} = L.splitPlates(perSide, L.plateSet(D.settings()));
