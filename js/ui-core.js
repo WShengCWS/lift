@@ -30,7 +30,7 @@ const D = {
     /* a weight stack with no step chosen yet: learn it from what was logged (cables at 6.25, 8.75 mean 2.5 kg steps) */
     if (e.logType === 'machine' && e.variant !== 'plates' && e.step == null) {
       const ws = []; for (const w of this.workouts()) for (const it of w.items) if (it.exId === id) for (const x of it.sets) if (x.done && x.kg) ws.push(+x.kg);
-      const inf = L.inferStep(ws); if (inf && inf < 5) { e.step = inf; e.stepLearned = true; }
+      const inf = L.inferStep(ws, D.settings()); if (inf && inf < L.defaultSettings(L.unitOf(D.settings())).steps.stack) { e.step = inf; e.stepLearned = true; }
     }
     this._ex.set(id, e); return e;
   },
@@ -244,7 +244,7 @@ function mrow(name, sets, range) {
 const PL = {25: [118, 22], 20: [118, 18], 15: [118, 15], 10: [118, 12], 5: [62, 11], 2.5: [54, 8], 2: [50, 7], 1.5: [47, 6], 1.25: [44, 6], 1: [44, 5], 0.5: [40, 4], 0.25: [36, 3]};
 const shade = (hex, a) => { const n = parseInt(hex.slice(1), 16); const f = v => Math.max(0, Math.min(255, v + a)); return `rgb(${f(n >> 16)},${f(n >> 8 & 255)},${f(n & 255)})`; };
 function plateRect(px, cy, k) {
-  const c = L.PLATE_COLORS[k], [h, w] = PL[k];
+  const st = D.settings(), c = L.plateColor(k, st), [h, w] = PL[L.plateLike(k, st)];
   return `<rect x="${px}" y="${cy - h / 2}" width="${w}" height="${h}" rx="${Math.min(4, w / 2)}" fill="${c}"/><rect x="${px + 1}" y="${cy - h / 2 + 3}" width="${Math.max(1, w * .35)}" height="${h - 6}" rx="1.5" fill="#fff" opacity=".28"/><rect x="${px + w - 2}" y="${cy - h / 2 + 2}" width="2" height="${h - 4}" fill="${shade(c, -60)}" opacity=".5"/>`;
 }
 function barSVG(total, bar, shape = 'olympic') {
@@ -263,7 +263,7 @@ function barSVG(total, bar, shape = 'olympic') {
     s += `<rect x="${side < 0 ? cx - 10 : cx}" y="${cy - 11}" width="10" height="22" rx="3" fill="var(--sleeve)"/>`;
     let x = cx + side * 10;
     s += `<rect x="${side < 0 ? 6 : x}" y="${cy - 5}" width="${side < 0 ? x - 6 : W - 6 - x}" height="10" rx="4" fill="var(--sleeve)"/>`;
-    for (const k of ps) { const w = PL[k][1]; s += plateRect(side < 0 ? x - w : x, cy, k); x += side * (w + 1); }
+    for (const k of ps) { const w = PL[L.plateLike(k, st)][1]; s += plateRect(side < 0 ? x - w : x, cy, k); x += side * (w + 1); }
     if (ps.length) s += `<rect x="${side < 0 ? x - 7 : x}" y="${cy - 9}" width="7" height="18" rx="2" fill="#2b2e36"/>`;
   }
   return s + '</svg>';
@@ -285,6 +285,12 @@ function stackSVG(kg, step, n = 20, off = step) {
 /* the cable / machine weight stack as its own selector: tap a plate or drag the pin up and down the stack,
    like pulling the pin on the real machine (dumbbells keep their rack strip). Plate p carries off + (p - 1) * step kg. */
 const STACK_GEO = {top: 22, area: 168};
+/* units shown on screen: weights are stored in the owner's unit, so only big totals and distances need help */
+const wUnit = () => L.unitOf(D.settings());
+const bigW = v => wUnit() === 'lb' ? (v >= 1000 ? `${fmt(+(v / 1000).toFixed(1))}<small> k lb</small>` : `${Math.round(v)}<small> kg</small>`) : (v >= 1000 ? `${fmt(+(v / 1000).toFixed(1))}<small> t</small>` : `${Math.round(v)}<small> kg</small>`);
+const bigUnit = () => wUnit() === 'lb' ? 'k lb' : 't';
+const dUnit = () => L.distUnit(D.settings());
+const distTxt = m => `${fmt(+L.distOut(m, D.settings()).toFixed(2))} ${dUnit()}`;
 function stackPicker(key, kg, step, off, n, forId) {
   const pin = Math.max(1, Math.min(n, Math.round(((+kg || 0) - off) / step) + 1)), last = off + (n - 1) * step;
   return `<div class="stackpick" data-stackpick="${key}" data-for="${esc(forId)}" data-step="${step}" data-off="${off}" data-n="${n}" data-kg="${kg}" role="slider" tabindex="0" aria-label="Stack weight" aria-valuemin="${off}" aria-valuemax="${last}" aria-valuenow="${kg}" aria-valuetext="pin ${pin}, ${fmt(kg)} kg">${stackSVG(off + (pin - 1) * step, step, n, off)}</div>`;
@@ -316,7 +322,7 @@ function machineSVG(perSide) {
     const base = side < 0 ? 128 : 218; let x = base;
     s += `<rect x="${side < 0 ? 40 : base}" y="${cy - 5}" width="${side < 0 ? base - 40 : W - 40 - base}" height="10" rx="4" fill="url(#chromeH)"/>`;
     x += side * 4;
-    for (const k of ps) { const w = PL[k][1]; s += plateRect(side < 0 ? x - w : x, cy, k); x += side * (w + 1); }
+    for (const k of ps) { const w = PL[L.plateLike(k, D.settings())][1]; s += plateRect(side < 0 ? x - w : x, cy, k); x += side * (w + 1); }
   }
   return s + '</svg>';
 }

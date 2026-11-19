@@ -10,14 +10,28 @@ const CARDIO = typeof CARDIO_FIELDS !== 'undefined' ? CARDIO_FIELDS : require('.
 const PLATE_COLORS = {25:'#d7263d',20:'#1e5bd8',15:'#f2c230',10:'#2a9d5c',5:'#f4f3ef',2.5:'#d7263d',2:'#1e5bd8',1.5:'#f2c230',1.25:'#c3c8d1',1:'#2a9d5c',0.5:'#f4f3ef',0.25:'#c3c8d1'};
 const ALL_PLATES = [25,20,15,10,5,2.5,2,1.5,1.25,1,0.5,0.25];
 const KB_COLORS = {4:'#c3c8d1',6:'#f4a7c6',8:'#f06fa8',10:'#f4a7c6',12:'#1e5bd8',14:'#7fb2ff',16:'#f2c230',18:'#c4b7f7',20:'#7a4fd8',22:'#9ad8b0',24:'#2a9d5c',28:'#f08c1e',32:'#d7263d',36:'#8a8f99',40:'#f4f3ef'};
+/* pounds: weights are stored in the unit the owner chose (kg or lb); switching converts everything once (convertUnits).
+   A pound gym has its own plates, bars and steps, so equipment comes from that unit's table, not from a conversion. */
+const LB = 0.45359237;
+const LB_PLATE_COLORS = {55:'#d7263d',45:'#1e5bd8',35:'#f2c230',25:'#2a9d5c',15:'#c3c8d1',10:'#f4f3ef',5:'#d7263d',2.5:'#2a9d5c',1.25:'#c3c8d1',0.5:'#f4f3ef'};
+const UNITS = {
+  kg: {plates: ALL_PLATES, colors: PLATE_COLORS, micro: 1, rack: [1.25, 2.5, 5, 10, 15, 20, 25], bwRange: [40, 140, .5], added: 60, inferSteps: [5, 2.5, 1.25, 1], calc: [100, 2.5]},
+  lb: {plates: [55, 45, 35, 25, 15, 10, 5, 2.5, 1.25, 0.5], colors: LB_PLATE_COLORS, micro: 2.5, rack: [2.5, 5, 10, 25, 35, 45], bwRange: [90, 310, 1], added: 130, inferSteps: [10, 5, 2.5, 1.25, 1], calc: [225, 5]},
+};
+const unitOf = st => (st && st.unit === 'lb') ? 'lb' : 'kg';
+const U = st => UNITS[unitOf(st)];
+const plateColor = (k, st) => U(st).colors[k] || '#9aa1ad';
+/* plate drawing size: a pound plate draws like the metric plate nearest in weight */
+const plateLike = (k, st) => unitOf(st) === 'kg' ? k : ({55: 25, 45: 20, 35: 15, 25: 10, 15: 5, 10: 5, 5: 2.5, 2.5: 1.25, 1.25: 1, 0.5: 0.25})[k] || 1.25;
 const MUSCLES = ['chest','back','shoulders','biceps','triceps','forearms','quads','hamstrings','glutes','calves','core','traps'];
 /* evidence-based weekly working-set ranges (MEV to MRV), editable in Settings */
 const RANGES = {chest:[10,20],back:[10,20],shoulders:[8,20],biceps:[8,20],triceps:[8,20],quads:[8,18],hamstrings:[6,16],glutes:[4,16],calves:[8,16]};
 
-function defaultSettings() {
+function defaultSettings(unit = 'kg') {
+  if (unit === 'lb') return Object.assign(defaultSettings('kg'), LB_DEFAULTS());
   return {
     name: '', lang: 'en', theme: 'device', reduceGlass: false, textSize: 'default',
-    unit: 'kg', bw: 72, bar: 20,
+    unit: 'kg', dist: 'km', bw: 72, bar: 20,
     steps: {barbell: 2.5, dumbbell: 2, stack: 5, addon: 2.5, machine: 5, bw: 2.5, round: 0.5},
     micro: false,
     plates: {25:true,20:true,15:true,10:true,5:true,2.5:true,2:false,1.5:false,1.25:true,1:false,0.5:true,0.25:true},
@@ -48,13 +62,42 @@ function defaultSettings() {
     backupReminder: true,
   };
 }
+/* what a pound gym has: 45 lb bar, 45/35/25/10/5/2.5 plates, 5 lb dumbbell steps, 10 lb stack plates */
+function LB_DEFAULTS() {
+  return {
+    unit: 'lb', bw: 160, bar: 45,
+    steps: {barbell: 5, dumbbell: 5, stack: 10, addon: 5, machine: 10, bw: 5, round: 1},
+    plates: {55:false,45:true,35:true,25:true,15:false,10:true,5:true,2.5:true,1.25:true,0.5:true},
+    bars: [
+      {id:'olympic', name:'Olympic bar', kg:45, note:'Bench, squat, deadlift'},
+      {id:'womens', name:"Women's bar", kg:35, note:''},
+      {id:'ez', name:'EZ curl bar', kg:25, note:''},
+      {id:'trap', name:'Trap bar', kg:55, note:''},
+      {id:'smith', name:'Smith machine', kg:35, note:'Bar counts'},
+    ],
+    dbMin: 5, dbMax: 120,
+    kettlebells: [18, 26, 35, 44, 53, 62, 70],
+    machines: [
+      {id:'legpress', name:'Leg press', kind:'plates', sled:110, step:10},
+      {id:'hack', name:'Hack squat', kind:'plates', sled:90, step:10},
+      {id:'stack', name:'Weight stacks', kind:'stack', plates:20, step:10},
+      {id:'assist', name:'Assisted pull-up', kind:'assist', min:10, max:150, step:10},
+    ],
+    bands: [
+      {id:'light', name:'Light', color:'#f2c230', kg:25},
+      {id:'medium', name:'Medium', color:'#d7263d', kg:45},
+      {id:'heavy', name:'Heavy', color:'#7a4fd8', kg:65},
+      {id:'xheavy', name:'X-heavy', color:'#2a9d5c', kg:90},
+    ],
+  };
+}
 function mergeSettings(saved) {
-  const d = defaultSettings();
+  const d = defaultSettings(saved && saved.unit === 'lb' ? 'lb' : 'kg');
   if (!saved || typeof saved !== 'object') return d;
   const out = Object.assign({}, d, saved);
   for (const k of ['steps', 'plates', 'ranges']) out[k] = Object.assign({}, d[k], saved[k] || {});
   for (const k of ['bars', 'machines', 'bands', 'kettlebells']) if (!Array.isArray(saved[k])) out[k] = d[k];
-  out.unit = 'kg';
+  out.unit = unitOf(saved); out.dist = saved.dist === 'mi' ? 'mi' : 'km';
   return out;
 }
 
@@ -110,13 +153,13 @@ const TYPE_LABEL = {barbell:'Barbell',rack:'Rack',machine:'Machine',bodyweight:'
 const VARIANT_LABEL = {olympic:'Olympic bar',ez:'EZ bar',trap:'Trap bar',smith:'Smith',dumbbell:'Dumbbells',kettlebell:'Kettlebells',plate:'Plate',stack:'Weight stack',plates:'Plate-loaded',run:'Run',walk:'Walk',bike:'Bike',row:'Row',ski:'SkiErg',stairs:'StairMaster',elliptical:'Elliptical',airbike:'Air bike',rope:'Jump rope'};
 
 /* ---------- equipment ---------- */
-function inferStep(weights) {
+function inferStep(weights, st) {
   const w = [...new Set(weights.filter(v => v > 0).map(v => +(+v).toFixed(2)))];
   if (w.length < 2) return null;
   const base = Math.min(...w);
-  return [5, 2.5, 1.25, 1].find(st => w.every(v => Math.abs((v - base) / st - Math.round((v - base) / st)) < 1e-6)) || null; /* no clean pattern: keep the default */
+  return U(st).inferSteps.find(st => w.every(v => Math.abs((v - base) / st - Math.round((v - base) / st)) < 1e-6)) || null; /* no clean pattern: keep the default */
 }
-function plateSet(st) { return ALL_PLATES.filter(k => st.plates[k] && (st.micro || k >= 1)); }
+function plateSet(st) { const u = U(st); return u.plates.filter(k => st.plates[k] && (st.micro || k >= u.micro)); }
 function splitPlates(perSide, plates) {
   let r = +perSide.toFixed(2); const out = [];
   if (r <= 0) return {plates: out, rest: 0};
@@ -273,7 +316,12 @@ function suggestion(e, lastSets, targetReps, st) {
   if (!target || !atTop.every(s => setReps(s, e) >= target)) return null;
   let next;
   if (e.variant === 'kettlebell') { next = st.kettlebells.filter(k => k > top).sort((a, b) => a - b)[0]; if (!next) return null; }
-  else next = +(top + stepFor(e, st)).toFixed(2);
+  else {
+    /* the next weight the gym can make above last time's top set (a converted 192.9 lb top set suggests 195, not 197.9) */
+    const step = stepFor(e, st), grid = e.logType === 'barbell' || e.variant === 'dumbbell' || (e.logType === 'machine' && machineFor(e, st).kind === 'plates');
+    if (grid) { const min = e.variant === 'dumbbell' ? st.dbMin : minFor(e, st), k = (top - min) / step; next = +(min + (Math.abs(k - Math.round(k)) > 1e-6 ? Math.ceil(k) : Math.round(k) + 1) * step).toFixed(2); }
+    else next = +(top + step).toFixed(2);
+  }
   if (e.variant === 'dumbbell' && next > st.dbMax) return null;
   return {from: top, kg: next, reps: target};
 }
@@ -281,16 +329,23 @@ function suggestion(e, lastSets, targetReps, st) {
 /* ---------- cardio ---------- */
 const KCAL_PER_MIN = {run: 10.5, walk: 6, bike: 9, row: 11, ski: 12, stairs: 11, elliptical: 9, rope: 12};
 function cardioFields(e) { return CARDIO[e.variant] || {fields: ['time', 'distance'], derived: 'pace'}; }
-function cardioDerived(e, s, bw = 72) {
-  const min = (+s.sec || 0) / 60, km = (+s.m || 0) / 1000, out = [];
+/* distances are stored in metres; shown in km or miles */
+const MI = 1609.344;
+const distUnit = st => (st && st.dist === 'mi') ? 'mi' : 'km';
+const distOut = (m, st) => (+m || 0) / (distUnit(st) === 'mi' ? MI : 1000);
+const distIn = (v, st) => Math.round((+v || 0) * (distUnit(st) === 'mi' ? MI : 1000));
+const speedUnit = st => distUnit(st) === 'mi' ? 'mph' : 'km/h';
+function cardioDerived(e, s, bw = 72, st = null) {
+  const min = (+s.sec || 0) / 60, km = distOut(s.m, st), out = [], du = distUnit(st), sp = speedUnit(st);
   const d = cardioFields(e).derived;
-  if (d === 'pace' && km && min) out.push(['Pace /km', mmss(min * 60 / km)], ['km/h', fmt(+(km / (min / 60)).toFixed(1))]);
-  if (d === 'speed' && km && min) out.push(['km/h', fmt(+(km / (min / 60)).toFixed(1))], ['Pace /km', mmss(min * 60 / km)]);
+  if (st && st.unit === 'lb') bw = bw * LB;
+  if (d === 'pace' && km && min) out.push([`Pace /${du}`, mmss(min * 60 / km)], [sp, fmt(+(km / (min / 60)).toFixed(1))]);
+  if (d === 'speed' && km && min) out.push([sp, fmt(+(km / (min / 60)).toFixed(1))], [`Pace /${du}`, mmss(min * 60 / km)]);
   if (d === 'split500' && s.m && min) out.push(['Split /500 m', mmss(min * 60 / (s.m / 500))], ['m/min', String(Math.round(s.m / min))]);
   if (d === 'floorsPerMin' && s.floors && min) out.push(['Floors /min', fmt(+(s.floors / min).toFixed(1))]);
   if (d === 'calPerMin' && s.cal && min) out.push(['cal /min', fmt(+(s.cal / min).toFixed(1))]);
   if (d === 'jumpsPerMin' && s.jumps && min) out.push(['Jumps /min', String(Math.round(s.jumps / min))]);
-  const kcal = e.variant === 'airbike' ? (+s.cal || 0) : Math.round(min * (KCAL_PER_MIN[e.variant] || 8) * bw / 72);
+  const kcal = s.kcal ? Math.round(+s.kcal) : e.variant === 'airbike' ? (+s.cal || 0) : Math.round(min * (KCAL_PER_MIN[e.variant] || 8) * bw / 72); /* a watch's measured calories win */
   return {pairs: out, kcal};
 }
 
@@ -469,7 +524,90 @@ const STARTERS = [
 ];
 function starterTemplates() { return STARTERS.map(t => ({id: t.id, name: t.name, note: t.note, starter: true, items: t.items.map(([exId, sets, reps]) => ({exId, sets, reps, link: false}))})); }
 
-const api = {EX, CARDIO, PLATE_COLORS, ALL_PLATES, KB_COLORS, MUSCLES, RANGES, TYPE_LABEL, VARIANT_LABEL, PR_LABEL,
+/* ---------- Garmin Connect activities (Activities > All activities > Export CSV) ---------- */
+/* cardio comes in as finished workouts; anything LIFT has no exercise for is listed, never guessed */
+const GARMIN = [
+  [/treadmill/, 'treadmill-run'], [/trail run|track run|street run|road run|^running$|^run$|virtual run|ultra run/, 'outdoor-run'],
+  [/hik|walk/, 'outdoor-walk'], [/indoor cycl|virtual ride|spin|stationary/, 'stationary-bike'], [/cycl|bik|ride|gravel/, 'outdoor-cycle'],
+  [/indoor row|row/, 'rowing-machine'], [/ellip/, 'elliptical'], [/stair|floor climb|step/, 'stairmaster'], [/ski ?erg/, 'skierg'], [/jump rope|skip/, 'jump-rope'],
+];
+function csvRows(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; continue; }
+    if (c === '"') q = true; else if (c === ',') { row.push(f); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; } else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+const gNum = v => { const n = parseFloat(String(v || '').replace(/,/g, '')); return isNaN(n) ? 0 : n; };
+const gTime = v => { const p = String(v || '').trim().split(':').map(Number); if (!p.length || p.some(isNaN)) return 0; return Math.round(p.reduce((a, x) => a * 60 + x, 0)); };
+function parseGarmin(text) {
+  const rows = csvRows(String(text || '').replace(/^\ufeff/, ''));
+  if (!rows.length) throw new Error('This file is empty.');
+  const h = rows[0].map(x => x.trim().toLowerCase()), col = name => h.indexOf(name);
+  const iType = col('activity type'), iDate = col('date');
+  if (iType < 0 || iDate < 0) throw new Error('This is not a Garmin Connect activities file.');
+  const iTitle = col('title'), iDist = col('distance'), iCal = col('calories'), iTime = col('time') >= 0 ? col('time') : col('moving time'), iHr = col('avg hr');
+  const acts = [], skipped = {};
+  for (const r of rows.slice(1)) {
+    const type = (r[iType] || '').trim(), when = (r[iDate] || '').trim(), m = when.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!type || !m) continue;
+    const t = type.toLowerCase(), hit = GARMIN.find(([re]) => re.test(t));
+    if (!hit) { skipped[type] = (skipped[type] || 0) + 1; continue; }
+    const start = new Date(+m[1].slice(0, 4), +m[1].slice(5, 7) - 1, +m[1].slice(8, 10), +m[2], +m[3], +(m[4] || 0)).getTime();
+    acts.push({type, exId: hit[1], date: m[1], start, title: (r[iTitle] || '').trim() || type, dist: iDist >= 0 ? gNum(r[iDist]) : 0, kcal: iCal >= 0 ? gNum(r[iCal]) : 0, sec: iTime >= 0 ? gTime(r[iTime]) : 0, hr: iHr >= 0 ? gNum(r[iHr]) : 0});
+  }
+  acts.sort((a, b) => a.start - b.start);
+  return {acts, skipped, from: acts.length ? acts[0].date : null, to: acts.length ? acts[acts.length - 1].date : null};
+}
+/* distances in the file are in km or miles (Garmin's own setting); rowing and SkiErg come in metres */
+function garminWorkouts(plan, distUnitOfFile = 'km') {
+  const per = distUnitOfFile === 'mi' ? MI : 1000;
+  return plan.acts.filter(a => a.sec > 0).map(a => {
+    const id = 'gm_' + a.date + '_' + new Date(a.start).toTimeString().slice(0, 8).replace(/:/g, '') + '_' + a.exId;
+    const metresAlready = /rowing|skierg/.test(a.exId) && a.dist >= 50;
+    const set = {id: id + '_s', type: 'working', done: true, ts: a.start + a.sec * 1000, sec: a.sec};
+    if (a.dist) set.m = Math.round(metresAlready ? a.dist : a.dist * per);
+    if (a.kcal) set.kcal = Math.round(a.kcal);
+    if (a.hr) set.note = `avg HR ${Math.round(a.hr)}`;
+    return {id, date: a.date, title: a.title, note: 'From Garmin', start: a.start, end: a.start + a.sec * 1000, items: [{uid: id + '_i', exId: a.exId, link: false, sets: [set]}], skipped: 0, templateId: null, source: 'garmin'};
+  });
+}
+
+/* ---------- switching kg <-> lb ---------- */
+/* history keeps its exact weight (to 0.1); equipment that was still the old unit's default becomes the new unit's
+   default (a 20 kg bar is a 45 lb bar, not 44.1), anything the owner changed is converted and rounded */
+function convertUnits(d, from, to) {
+  if (from === to) return d;
+  const f = to === 'lb' ? 1 / LB : LB, w = v => (v == null || v === '' || isNaN(v)) ? v : +(+v * f).toFixed(1);
+  const set = x => { const y = Object.assign({}, x); for (const k of ['kg', 'add', 'bandKg', 'bw']) if (y[k] != null && y[k] !== '') y[k] = w(y[k]); return y; };
+  const items = its => (its || []).map(it => Object.assign({}, it, {sets: (it.sets || []).map(set)}));
+  const out = Object.assign({}, d);
+  if (d.workouts) out.workouts = d.workouts.map(x => x.deleted ? x : Object.assign({}, x, {items: items(x.items), bw: w(x.bw)}));
+  if (d.session) out.session = Object.assign({}, d.session, {items: items(d.session.items)});
+  if (d.weighins) out.weighins = d.weighins.map(x => x.deleted ? x : Object.assign({}, x, {kg: w(x.kg)}));
+  if (d.exprefs) out.exprefs = d.exprefs.map(x => x.step ? Object.assign({}, x, {step: +(x.step * f).toFixed(2)}) : x);
+  if (d.settings) {
+    const st = d.settings, A = defaultSettings(from), B = defaultSettings(to), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const near = (v, step) => Math.max(step, Math.round(+v * f / step) * step);
+    const big = to === 'lb' ? 5 : 2.5, small = to === 'lb' ? 0.5 : 0.25;
+    const ns = Object.assign({}, st, {unit: to, bw: w(st.bw)});
+    ns.bar = st.bar === A.bar ? B.bar : near(st.bar, big);
+    ns.steps = {}; for (const k in B.steps) ns.steps[k] = st.steps && st.steps[k] !== A.steps[k] ? near(st.steps[k], small) : B.steps[k];
+    ns.plates = B.plates;
+    ns.bars = (st.bars || []).map(b => { const a = A.bars.find(x => x.id === b.id), bb = B.bars.find(x => x.id === b.id); return Object.assign({}, b, {kg: a && bb && a.kg === b.kg ? bb.kg : near(b.kg, big)}); });
+    ns.dbMin = st.dbMin === A.dbMin ? B.dbMin : near(st.dbMin, small * 2); ns.dbMax = st.dbMax === A.dbMax ? B.dbMax : near(st.dbMax, big);
+    ns.kettlebells = same(st.kettlebells, A.kettlebells) ? B.kettlebells : (st.kettlebells || []).map(k => Math.round(k * f));
+    ns.machines = (st.machines || []).map(m => { const a = A.machines.find(x => x.id === m.id), b = B.machines.find(x => x.id === m.id), keep = a && b && same(m, a); if (keep) return b; const o = Object.assign({}, m); for (const k of ['sled', 'min', 'max']) if (o[k] != null) o[k] = near(o[k], big); if (o.step) o.step = near(o.step, small * 2); return o; });
+    ns.bands = (st.bands || []).map(b => { const a = A.bands.find(x => x.id === b.id), bb = B.bands.find(x => x.id === b.id); return Object.assign({}, b, {kg: a && bb && a.kg === b.kg ? bb.kg : near(b.kg, to === 'lb' ? 5 : 1)}); });
+    out.settings = ns;
+  }
+  return out;
+}
+
+const api = {parseGarmin, garminWorkouts, csvRows, EX, CARDIO, PLATE_COLORS, ALL_PLATES, LB, MI, UNITS, unitOf, U, plateColor, plateLike, convertUnits, distUnit, distOut, distIn, speedUnit, KB_COLORS, MUSCLES, RANGES, TYPE_LABEL, VARIANT_LABEL, PR_LABEL,
   defaultSettings, mergeSettings, fmt, fmtThousands, mmss, localDate, parseDate, addDays, daysBetween, weekStartOf, isoWeek, roundTo, byDate,
   pairDefault, defaultRest, resolveExercise, inferStep, plateSet, splitPlates, barFor, machineFor, stepFor, minFor, dumbbellRange, snapWeight,
   isReal, hasData, setReps, setTotalReps, setWeight, setVolume, e1rm, warmups, dropWeight, computePRs, workoutSummary, muscleSets, weekWorkouts,

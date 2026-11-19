@@ -53,10 +53,11 @@ Works offline, installs on your phone and keeps your data on your device. In Eng
 **Your data**
 - Everything stays on the phone; nothing is sent anywhere
 - One-file backup export and import, including from the older LIFT 5
+- Runs, rides, walks and rows from **Garmin Connect** (its activities CSV), with the watch's time, distance and calories
 - Templates, favourites, custom exercises, and your gym's own bars, plates, dumbbells, machines and bands
 
 **Comfort**
-- English or Simplified Chinese; light, dark or follow-the-phone theme; "reduce glass" and a larger text size
+- **kg or lb**, **km or miles**; English or Simplified Chinese; light, dark or follow-the-phone theme; "reduce glass" and a larger text size
 - 56 px main buttons for one-handed use mid-set; keyboard focus rings; animations turn off with Reduce motion
 
 ## Install it
@@ -155,7 +156,7 @@ Each log type shows what it needs:
 | Bodyweight | reps, and added or assisted kg | Plain, + weight (belt or vest) or assisted (band or machine) |
 | Band | band, reps | Pick the band colour; one side at a time logs left and right |
 | Timed | seconds | **Start hold** counts up; stop to log, or type the time |
-| Cardio | time, distance, level | Pace and speed are worked out; rate how it felt |
+| Cardio | time, distance, level | Pace and speed are worked out (per km or per mile); rate how it felt; or import it from Garmin |
 
 ### 4. Rest and the rest-over alarm
 
@@ -272,11 +273,13 @@ Open with the gear on Home.
 
 - **You**: bodyweight and the name on Home.
 - **Appearance**: theme (Light, Dark, Device), **Reduce glass**, text size, and **Language**: English or **简体中文**.
-- **Units and weights**: **Weight steps** (how much each − / + adds for barbells, dumbbells, stacks, machines) and **Equipment**: your bars, plates (tap to turn off ones your gym doesn't have), dumbbell rack, kettlebells, machines (stack size or sled weight) and bands.
+- **Units and weights**: **Weight unit** kg or lb, and **Distance** km or mi (see below), **Weight steps** (how much each − / + adds for barbells, dumbbells, stacks, machines) and **Equipment**: your bars, plates (tap to turn off ones your gym doesn't have), dumbbell rack, kettlebells, machines (stack size or sled weight) and bands.
 - **Logging**: fill in last time's numbers, warm-up suggestions, drop-set size, RPE, PR alerts, haptics, keep the screen awake.
 - **Rest timer**: default rest, different rest per exercise, sound, vibration.
 - **Training**: weekly target, first day of the week, muscle volume ranges, 1RM formula.
-- **Reminders**, **Sync and data** (export, import, clear all data) and **App** (install, version).
+- **Reminders**, **Sync and data** (export, import, clear all data) and **App** (install, and the version this phone is running, so you can check an update arrived).
+
+**Pounds and miles.** Settings › Units and weights › **Weight unit** › **lb** asks once, then converts every weight you have: your history (to 0.1 lb), the workout in progress, weigh-ins and your equipment. A metric gym becomes a pound gym: 45 lb bar, 45 / 35 / 25 / 10 / 5 / 2.5 lb plates, 5 lb steps, 10 lb stack plates. Converted weights that fall between loadable ones snap to the next loadable weight when you tap − or +. Switching back to kg returns the same numbers. **Distance** › **mi** shows runs, walks and rides in miles, with pace per mile and mph; rowing and carries stay in metres.
 
 </td></tr></table>
 
@@ -291,7 +294,8 @@ Open with the gear on Home.
 ### 12. Backups and moving phones
 
 - **Export**: Settings › Sync and data › **Export backup** (or the download icon in History) saves one `.json` file with everything: workouts, templates, custom exercises, weigh-ins and settings. Keep it somewhere safe, like your cloud drive.
-- **Import**: Settings › **Import backup**, then pick the file. LIFT shows what will come in before anything changes. It **merges**: workouts already here stay, duplicates are skipped, and workouts you deleted on the phone come back from the file. Old LIFT 5 backups work too; exercise names LIFT doesn't know get a review step where you match each one to a built-in exercise or keep it as your own.
+- **Import**: Settings › **Import backup**, then pick the file. LIFT shows what will come in before anything changes. It **merges**: workouts already here stay, duplicates are skipped, and workouts you deleted on the phone come back from the file. A backup made in the other unit (kg or lb) is converted on the way in.
+- **Garmin**: in Garmin Connect on a computer, open **Activities › All Activities › Export CSV**, then import that file the same way. Runs, treadmill runs, rides, indoor rides, walks, rowing, elliptical and stairs become cardio workouts with the watch's time, distance, calories and average heart rate. Swims, strength sessions and anything else LIFT has no exercise for are listed and left out. Importing the same file again adds nothing. Old LIFT 5 backups work too; exercise names LIFT doesn't know get a review step where you match each one to a built-in exercise or keep it as your own.
 - **New phone**: export on the old phone, send the file to yourself, install LIFT on the new phone, and choose **Import it** on the welcome screen.
 - **Clear all data** asks twice and saves a backup first.
 
@@ -333,7 +337,7 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. To host it, upload these files to GitHub Pages or Cloudflare Pages. All paths are relative, so it also works from a sub-folder.
 
-After changing any file, bump `VERSION` in `sw.js` so installed copies pick up the update.
+After changing any file, bump `VERSION` in `sw.js` so installed copies pick up the update. `sh publish.sh` (which copies the app into `GitHub/lift/`) refuses to run if you forgot, or if any test fails; `SKIP_E2E=1` skips only the browser scenarios.
 
 To test, from the source folder (the tests are not part of the published app; Node 22+, and the browser tests also need Google Chrome and use made-up sample data):
 
@@ -349,7 +353,7 @@ node tests/e2e/scenarios.js
 sh tests/e2e/crawl-all.sh
 ```
 
-`run.js` checks the logic and storage, `sw-check.js` the offline cache, `scenarios.js` walks through every feature in English and Chinese and checks what gets saved, and `crawl-all.sh` presses every button on every screen in both languages, reporting crashes and any English left in the Chinese version.
+`run.js` checks the logic and storage (and that every piece of English on the screens has Chinese), `sw-check.js` the offline cache, `scenarios.js` walks through every feature in English and Chinese and checks what gets saved, and `crawl-all.sh` presses every button on every screen in both languages, reporting crashes and any English left in the Chinese version.
 
 ## How it's built
 

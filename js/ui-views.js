@@ -1,7 +1,7 @@
 /* LIFT screens outside the set logger: Home, History, Progress, Stats, Settings, Templates, New exercise, Welcome, Import. */
 'use strict';
 const exOf = id => D.ex(id);
-const tons = v => v >= 1000 ? `${fmt(+(v / 1000).toFixed(1))}<small> t</small>` : `${Math.round(v)}<small> kg</small>`;
+const tons = v => bigW(v);
 const MUSCLE_ORDER = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'biceps', 'triceps', 'glutes', 'calves', 'core', 'forearms', 'traps'];
 function greet() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
 function weekCounts(st, n = 8) {
@@ -67,7 +67,7 @@ function weighCard(prev) {
   const bw = WI.bw;
   return `<div class="card wi"><div class="hd"><div><b style="font-size:16px;font-weight:800">Weekly weigh-in</b><p style="margin-top:2px">${prev ? `last ${fmt(prev.kg.toFixed(1))} kg, ${esc(dDay(prev.date))}` : 'once a week is enough'}</p></div><b class="serif" data-wv>${bw.toFixed(1)}<small> kg</small></b></div>${weighStrip(bw)}<div class="btns" style="margin-top:6px"><button class="btn2" data-act="wiLog">${ic('check', 'sm')}<span data-wl>Log ${bw.toFixed(1)} kg</span></button><button class="btn2" style="flex:0 0 auto;padding:0 18px" data-act="wiSkip">Not now</button></div></div>`;
 }
-const weighStrip = bw => strip('wi', range(Math.max(30, Math.round(bw) - 6), Math.round(bw) + 6, .1), +bw.toFixed(1), v => v.toFixed(1), 'small', 'Bodyweight');
+const weighStrip = bw => { const lb = L.unitOf(D.settings()) === 'lb', span = lb ? 13 : 6, step = lb ? .2 : .1, lo = Math.max(lb ? 66 : 30, Math.round(bw) - span); return strip('wi', range(lo, Math.round(bw) + span, step), +(lo + Math.round((bw - lo) / step) * step).toFixed(1), v => v.toFixed(1), 'small', 'Bodyweight'); };
 STRIP.wi = {live(v) { WI.bw = v; $$('[data-wv]').forEach(x => x.innerHTML = `${v.toFixed(1)}<small> kg</small>`); $$('[data-wl]').forEach(x => x.textContent = `Log ${v.toFixed(1)} kg`); }, set(v) { WI.bw = v; }};
 A.wiLog = () => {
   const st = D.settings(), wk = L.weekStartOf(today(), st.weekStart), kg = +(+WI.bw).toFixed(1);
@@ -192,15 +192,16 @@ function seriesOf(exId, metric) {
       case 'reps': y = Math.max(...real.map(x => L.setReps(x, e))); break;
       case 'add': y = Math.max(...real.map(x => +x.add || 0)); break;
       case 'sec': y = Math.max(...real.map(x => +x.sec || 0)); break;
-      case 'dist': y = real.reduce((a, x) => a + (+x.m || 0), 0) / 1000; break;
+      case 'dist': y = L.distOut(real.reduce((a, x) => a + (+x.m || 0), 0), D.settings()); break;
       case 'time': y = real.reduce((a, x) => a + (+x.sec || 0), 0) / 60; break;
-      case 'pace': { const m = real.reduce((a, x) => a + (+x.m || 0), 0), s = real.reduce((a, x) => a + (+x.sec || 0), 0); if (!m) continue; y = s / 60 / (m / 1000); break; }
+      case 'pace': { const m = real.reduce((a, x) => a + (+x.m || 0), 0), s = real.reduce((a, x) => a + (+x.sec || 0), 0); if (!m) continue; y = s / 60 / L.distOut(m, D.settings()); break; }
     }
     out.push({x: L.parseDate(h.w.date).getTime(), y: +y.toFixed(2), date: h.w.date, pr: h.sets.some(x => prs.has(x.id))});
   }
   return out;
 }
-const UNIT = {max: 'kg', vol: 'kg', e1rm: 'kg', reps: 'reps', add: 'kg', sec: 's', dist: 'km', time: 'min', pace: 'min/km'};
+const UNITX = {max: 'kg', vol: 'kg', e1rm: 'kg', reps: 'reps', add: 'kg', sec: 's', time: 'min'};
+const UNIT = new Proxy(UNITX, {get: (o, k) => k === 'dist' ? dUnit() : k === 'pace' ? 'min/' + dUnit() : o[k]});
 VIEWS.progress = {dock: true, render() {
   const ws = D.workouts();
   if (ws.length < 2) return `<div class="hd"><div><p>${ws.length ? '1 workout so far' : 'No workouts yet'}</p><h3 class="pt">Progress</h3></div></div><div class="ghostw"><div class="ghost" aria-hidden="true">${sampleProgress()}</div>${emptyCard('Then each exercise gets its chart: max weight, estimated 1RM, PR markers and your best reps at each weight. Below is a preview.', ws.length)}</div>`;
@@ -249,7 +250,7 @@ function sampleProgress() {
 
 /* ---------- Stats ---------- */
 const STATS = {off: 0};
-let CALC = {kg: 100, reps: 5};
+let CALC = null; /* 1RM calculator: starts at 100 kg or 225 lb */
 VIEWS.stats = {dock: true, render() {
   const ws = D.workouts(), st = D.settings();
   const wk = L.addDays(L.weekStartOf(today(), st.weekStart), -7 * STATS.off), end = L.addDays(wk, 6);
@@ -327,7 +328,7 @@ function trends(ws, st) {
   for (let i = 11; i >= 0; i--) { const wk = L.addDays(cur, -7 * i); weeks.push({wk, w: L.weekWorkouts(ws, wk), lbl: dShort(wk)}); }
   const chips = `<div class="chips" role="group" aria-label="Trend">${[['vol', 'Volume'], ['sess', 'Sessions'], ['e1rm', 'Top lifts'], ['time', 'Time'], ['prs', 'PRs']].map(([k, l]) => `<button class="chip ${TREND.k === k ? 'on' : ''}" data-act="trend" data-v="${k}" aria-pressed="${TREND.k === k}">${l}</button>`).join('')}</div>`;
   let body = '';
-  if (TREND.k === 'vol') { const v = weeks.map(x => ({v: x.w.reduce((a, w) => a + L.workoutSummary(w, exOf).vol, 0) / 1000, lbl: x.lbl})), avg = v.slice(0, -1).reduce((a, x) => a + x.v, 0) / 11; body = `<p class="lede">Tonnes lifted per week. Average ${fmt(+avg.toFixed(1))} t before this week.</p>${barChart(v, {fmtv: x => fmt(+x.toFixed(1)) + ' t', label: 'Volume per week'})}`; }
+  if (TREND.k === 'vol') { const v = weeks.map(x => ({v: x.w.reduce((a, w) => a + L.workoutSummary(w, exOf).vol, 0) / 1000, lbl: x.lbl})), avg = v.slice(0, -1).reduce((a, x) => a + x.v, 0) / 11; body = `<p class="lede">${wUnit() === 'lb' ? 'Thousands of pounds' : 'Tonnes'} lifted per week. Average ${fmt(+avg.toFixed(1))} ${bigUnit()} before this week.</p>${barChart(v, {fmtv: x => fmt(+x.toFixed(1)) + ' ' + bigUnit(), label: 'Volume per week'})}`; }
   if (TREND.k === 'sess') { const v = weeks.map(x => ({v: x.w.length, lbl: x.lbl})), hit = v.filter(x => x.v >= st.weeklyTarget).length; body = `<p class="lede">Sessions per week against your target of ${st.weeklyTarget}. On target ${hit} of 12 weeks.</p>${barChart(v, {target: st.weeklyTarget, label: 'Sessions per week'})}`; }
   if (TREND.k === 'time') { const mins = weeks.map(x => x.w.reduce((a, w) => a + L.workoutSummary(w, exOf).min, 0)), sess = weeks.reduce((a, x) => a + x.w.filter(w => L.workoutSummary(w, exOf).min).length, 0); body = `<p class="lede">Minutes trained per week. Average session ${sess ? Math.round(mins.reduce((a, b) => a + b, 0) / sess) : 0} min.</p>${barChart(mins.map((v, i) => ({v, lbl: weeks[i].lbl})), {fmtv: x => Math.round(x) + ' min', label: 'Time per week'})}`; }
   if (TREND.k === 'prs') { const prs = D.prs(), months = []; const d0 = L.parseDate(today()); for (let i = 5; i >= 0; i--) { const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); months.push({key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, lbl: MON[d.getMonth()], v: 0}); }
@@ -354,12 +355,13 @@ function bwProgress() {
 }
 A.progBw = () => { PROG.ex = '__bw'; PROG.cmp = null; if (S.sheet) { S.sheet = null; } if (S.view === 'progress') { if (history.state && history.state.s) history.back(); setTimeout(render, 30); } else nav('progress'); };
 function calcCard(st) {
+  if (!CALC) CALC = {kg: L.U(st).calc[0], reps: 5};
   const e1 = L.e1rm(CALC.kg, CALC.reps, st.formula), r = v => fmt(L.roundTo(v, st.steps.round));
   return `<div class="sec"><h5>1RM calculator</h5><span>${st.formula === 'brzycki' ? 'Brzycki' : 'Epley'}</span></div><div class="card" style="padding:14px 16px"><div class="steps" style="margin-top:0">${stepper('Weight', fmt(CALC.kg), 'calc', 'data-f="kg"')}${stepper('Reps', CALC.reps, 'calc', 'data-f="reps"')}</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:12px"><span class="lbl">Estimated 1RM</span><b class="serif" style="font-size:40px;margin-left:auto">${r(e1)} kg</b></div>
     <table style="margin-top:4px"><tr><th>%</th>${[90, 80, 70, 60].map(p => `<th class="r">${p}</th>`).join('')}</tr><tr><td>kg</td>${[.9, .8, .7, .6].map(p => `<td class="r">${r(e1 * p)}</td>`).join('')}</tr></table><p class="lede">An estimate (est.), never a PR.</p></div>`;
 }
-STEP.calc = (dir, ds, n) => { if (ds.f === 'kg') CALC.kg = Math.max(1, +(CALC.kg + dir * (n > 8 ? 10 : 2.5)).toFixed(2)); else CALC.reps = Math.max(1, Math.min(20, CALC.reps + dir)); render(); };
+STEP.calc = (dir, ds, n) => { const u = L.U(D.settings()).calc[1]; if (ds.f === 'kg') CALC.kg = Math.max(1, +(CALC.kg + dir * (n > 8 ? u * 4 : u)).toFixed(2)); else CALC.reps = Math.max(1, Math.min(20, CALC.reps + dir)); render(); };
 A.sweek = d => { STATS.off = Math.max(0, STATS.off + +d.v); render(); };
 
 /* ---------- Settings ---------- */
@@ -372,14 +374,38 @@ VIEWS.settings = {dock: false, render() {
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Settings</h3>
   <div class="sec"><h5>You</h5></div><div class="card list">${RW('scale', '<span data-body>Bodyweight</span>', 'Weekly weigh-in; used for pull-ups, dips, push-ups', kgs(D.latestBw()), 'data-act="weighSheet"')}${RW('user', 'Name on Home', '', esc(st.name || 'not set'), 'data-act="textSheet" data-k="name"')}</div>
   <div class="sec"><h5>Appearance</h5></div><div class="card list">${sr('Theme', segb('theme', [['light', `${ic('sun', 'sm')}Light`], ['dark', `${ic('moon', 'sm')}Dark`], ['device', `${ic('phone', 'sm')}Device`]], st.theme))}${sr('Reduce glass', tog('reduceGlass', st.reduceGlass, 'Reduce glass'), 'Solid cards instead of frosted glass. Also turns on by itself when the battery is low.')}${sr('Text size', valc(st.textSize === 'large' ? 'Large' : 'Default'), '', 'data-act="pick" data-k="textSize"')}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}</div>
-  <div class="sec"><h5>Units and weights</h5></div><div class="card list">${sr('Units', '<span class="val">kg, km</span>', 'lbs and miles come later')}${RW('ruler', 'Weight steps', 'Barbell / dumbbells / stacks', `${fmt(st.steps.barbell)} / ${fmt(st.steps.dumbbell)} / ${fmt(st.steps.stack)}`, 'data-act="go" data-v="steps"')}${RW('bar', 'Equipment', 'Bars, plates, dumbbells, machines, bands', 'Edit', 'data-act="go" data-v="equip"')}</div>
+  <div class="sec"><h5>Units and weights</h5></div><div class="card list">${sr('Weight unit', segb('unitW', [['kg', 'kg'], ['lb', 'lb']], L.unitOf(st)), 'Switching converts your history and equipment')}${sr('Distance', segb('unitD', [['km', 'km'], ['mi', 'mi']], L.distUnit(st)))}${RW('ruler', 'Weight steps', 'Barbell / dumbbells / stacks', `${fmt(st.steps.barbell)} / ${fmt(st.steps.dumbbell)} / ${fmt(st.steps.stack)}`, 'data-act="go" data-v="steps"')}${RW('bar', 'Equipment', 'Bars, plates, dumbbells, machines, bands', 'Edit', 'data-act="go" data-v="equip"')}</div>
   <div class="sec"><h5>Logging</h5></div><div class="card list">${sr("Fill in last time's numbers", tog('fillLast', st.fillLast))}${sr('Warm-up sets', valc(st.warmups === 'off' ? 'Off' : 'Ask'), 'Shows "Add warm-ups": bar, 50, 70, 85%', 'data-act="pick" data-k="warmups"')}${sr('Drop sets', valc('−' + st.drop + '%'), 'Each drop takes this much off, rounded to the step', 'data-act="pick" data-k="drop"')}${sr('RPE', tog('rpe', st.rpe), 'Rate each set 6 to 10 (optional)')}${sr('PR alerts', tog('prAlerts', st.prAlerts))}${sr('Haptics', tog('haptics', st.haptics), 'Tick on swipe, buzz on Log set')}${sr('Keep screen awake', tog('keepAwake', st.keepAwake), 'During a workout')}</div>
   <div class="sec"><h5>Rest timer</h5></div><div class="card list">${sr('Default rest', valc(mmss(st.rest)), '', 'data-act="pick" data-k="rest"')}${sr('Different rest per exercise', tog('restPerExercise', st.restPerExercise), 'Big lifts 2:30, compounds 2:00, isolation 1:30, bodyweight 1:00')}${sr('Sound', tog('sound', st.sound))}${sr('Vibration', tog('vibrate', st.vibrate))}</div>
   <div class="sec"><h5>Training</h5></div><div class="card list">${sr('Weekly target', valc(plural(st.weeklyTarget, 'session')), '', 'data-act="pick" data-k="weeklyTarget"')}${sr('Week starts on', valc(DAYL[st.weekStart]), '', 'data-act="pick" data-k="weekStart"')}${sr('Muscle volume ranges', valc('MEV / MRV'), '', 'data-act="go" data-v="ranges"')}${sr('1RM formula', segb('formula', [['epley', 'Epley'], ['brzycki', 'Brzycki']], st.formula))}</div>
   <div class="sec"><h5>Reminders</h5></div><div class="card list">${sr('Backup reminder', tog('backupReminder', st.backupReminder), 'Every 7 days, on Home')}</div>
-  <div class="sec"><h5>Sync and data</h5></div><div class="card list">${sr('Cloud sync', '<span class="val">Not set up</span>', 'Arrives with Cloudflare. Until then everything stays on this phone.')}${sr('Export backup', ic('dl', 'sm'), meta.lastBackup ? 'Last: ' + dShort(L.localDate(new Date(meta.lastBackup))) + ', everything, one file' : 'Everything, as one file', 'data-act="exportNow"')}${sr('Import backup', ic('ul', 'sm'), 'From LIFT 5 or a LIFT 2 backup', 'data-act="go" data-v="import1"')}${sr('<span style="color:var(--over)">Clear all data</span>', '', 'Asks twice, saves a backup first', 'data-act="clearAll"')}</div>
-  <div class="sec"><h5>App</h5></div><div class="card list">${INSTALL && !standalone() ? sr('Install LIFT', ic('install', 'sm'), 'Add to your home screen', 'data-act="install"') : ''}${sr('About', '<span class="val">v2.0</span>', `${L.EX.length} built-in exercises, data stays on this phone`)}</div>`;
+  <div class="sec"><h5>Sync and data</h5></div><div class="card list">${sr('Cloud sync', '<span class="val">Not set up</span>', 'Arrives with Cloudflare. Until then everything stays on this phone.')}${sr('Export backup', ic('dl', 'sm'), meta.lastBackup ? 'Last: ' + dShort(L.localDate(new Date(meta.lastBackup))) + ', everything, one file' : 'Everything, as one file', 'data-act="exportNow"')}${sr('Import backup', ic('ul', 'sm'), 'From a LIFT backup, or Garmin Connect activities', 'data-act="go" data-v="import1"')}${sr('<span style="color:var(--over)">Clear all data</span>', '', 'Asks twice, saves a backup first', 'data-act="clearAll"')}</div>
+  <div class="sec"><h5>App</h5></div><div class="card list">${INSTALL && !standalone() ? sr('Install LIFT', ic('install', 'sm'), 'Add to your home screen', 'data-act="install"') : ''}${sr('About', `<span class="val" data-ver>${APPVER ? 'v' + APPVER : ''}</span>`, `${L.EX.length} built-in exercises, data stays on this phone`)}</div>`;
 }};
+/* the version of the copy this phone runs: the offline cache's name (lift-2.8.1-1), or sw.js when nothing is cached */
+let APPVER = '';
+async function appVersion() {
+  const pick = s => { const m = String(s).match(/lift-(\d+\.\d+\.\d+)/); return m ? m[1] : ''; };
+  try { if (window.caches) { const v = (await caches.keys()).map(pick).filter(Boolean).sort((a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; }).pop(); if (v) return v; } } catch (e) {}
+  try { return pick(await (await fetch('sw.js', {cache: 'no-store'})).text()); } catch (e) { return ''; }
+}
+appVersion().then(v => { APPVER = v; $$('[data-ver]').forEach(x => x.textContent = v ? 'v' + v : ''); });
+/* kg <-> lb: every stored weight is converted once (history to 0.1, equipment to the new unit's gym) */
+A.unitW = d => { if (d.v === L.unitOf(D.settings())) return; openSheet('confirm', d.v === 'lb'
+  ? {title: 'Switch to pounds?', body: 'Every weight in your history, your current workout and your equipment is converted to lb. Bars and plates become a pound gym: 45 lb bar, 45 / 35 / 25 / 10 / 5 / 2.5 lb plates. You can switch back at any time.', ok: 'Switch to lb', act: 'unitLb'}
+  : {title: 'Switch to kilograms?', body: 'Every weight in your history, your current workout and your equipment is converted to kg. Bars and plates become a metric gym: 20 kg bar, 25 / 20 / 15 / 10 / 5 / 2.5 / 1.25 kg plates. You can switch back at any time.', ok: 'Switch to kg', act: 'unitKg'}); };
+function switchUnit(to) {
+  const st = D.settings(), from = L.unitOf(st); if (from === to) return;
+  const out = L.convertUnits({workouts: Store.all('workouts'), session: D.session(), weighins: Store.all('weighins'), exprefs: Store.all('exprefs'), settings: st}, from, to);
+  Store.merge('workouts', out.workouts, {overwrite: true}); Store.merge('weighins', out.weighins, {overwrite: true}); Store.merge('exprefs', out.exprefs, {overwrite: true});
+  if (out.session) D.saveSession(out.session);
+  Store.setOne('settings', out.settings);
+  D._st = null; D._w = null; D._prs = null; D._ex.clear(); CALC = null; WI.bw = null;
+  I18N.setUnits(to);
+}
+A.unitLb = () => { switchUnit('lb'); closeSheet(); setTimeout(() => { render(); toast('Weights are now in lb'); }, 30); };
+A.unitKg = () => { switchUnit('kg'); closeSheet(); setTimeout(() => { render(); toast('Weights are now in kg'); }, 30); };
+A.unitD = d => { D.saveSettings({dist: d.v === 'mi' ? 'mi' : 'km'}); render(); };
 A.toggle = d => { const st = D.settings(); D.saveSettings({[d.k]: !st[d.k]}); applyTheme(); if (d.k === 'keepAwake') { st.keepAwake ? unwake() : wake(); } render(); };
 A.lang = d => { if (d.v === D.settings().lang) return; D.saveSettings({lang: d.v}); I18N.setLang(d.v); render(); };
 A.theme = d => { D.saveSettings({theme: d.v}); applyTheme(); render(); };
@@ -431,7 +457,7 @@ VIEWS.steps = {dock: false, render() {
   const st = D.settings();
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Weight steps</h3><p class="lede">How much each tap of − / + adds, for each kind of equipment.</p>
     ${Object.keys(STEPOPTS).map(k => `<div class="card stepc"><div class="stephd"><div><b>${STEPLBL[k][0]}</b><small>${STEPLBL[k][1]}</small></div><span class="now">${fmt(st.steps[k])} kg</span></div><div class="chipz">${STEPOPTS[k].map(v => `<button data-act="stepSet" data-k="${k}" data-v="${v}" class="${v === st.steps[k] ? 'on' : ''}">${fmt(v)}</button>`).join('')}</div></div>`).join('')}
-    <div class="card list" style="margin-top:10px">${sr('Micro plates (0.5 and 0.25 kg)', tog('micro', st.micro), 'Lets the barbell move in 0.5 kg or 1 kg jumps')}</div>`;
+    <div class="card list" style="margin-top:10px">${(() => { const mp = L.U(st).plates.filter(k => k < L.U(st).micro); return sr(`Micro plates (${mp.map(fmt).join(' and ')} kg)`, tog('micro', st.micro), `Lets the barbell move in ${mp.slice().reverse().map(k => fmt(k * 2) + ' kg').join(' or ')} jumps`); })()}</div>`;
 }};
 A.stepSet = d => {
   const st = D.settings(), steps = Object.assign({}, st.steps, {[d.k]: +d.v}), patch = {steps};
@@ -446,7 +472,7 @@ VIEWS.equip = {dock: false, render() {
   const avail = new Set(L.plateSet(st));
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Equipment</h3><p class="lede">What your gym has and what it weighs. Change it here and every exercise using it updates.</p>
   <div class="sec"><h5>Bars</h5><button data-act="eqEdit" data-t="bar" data-id="new">+ add bar</button></div><div class="card list">${st.bars.map(b => RW('bar', b.name, b.note || (b.id === 'olympic' ? 'Default for bench, squat, deadlift' : ''), kgs(b.kg), `data-act="eqEdit" data-t="bar" data-id="${esc(b.id)}"`)).join('')}</div>
-  <div class="sec"><h5>Plates</h5><span>tap to turn off</span></div><div class="card" style="padding:12px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;justify-items:center">${L.ALL_PLATES.map(k => `<button class="plate ${[5, 1.25, .5, .25].includes(k) ? 'lt' : [15, 10, 1.5, 1].includes(k) ? 'ink' : ''} ${avail.has(k) ? '' : 'off'}" style="background:${L.PLATE_COLORS[k]};border-radius:50%" data-act="plateTog" data-k="${k}" aria-pressed="${avail.has(k)}" aria-label="${fmt(k)} kg plates">${fmt(k)}</button>`).join('')}</div>${!st.micro ? '<p class="lede">0.5 and 0.25 kg need Micro plates on in Weight steps.</p>' : ''}
+  <div class="sec"><h5>Plates</h5><span>tap to turn off</span></div><div class="card" style="padding:12px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;justify-items:center">${L.U(st).plates.map(k => { const kl = L.plateLike(k, st); return `<button class="plate ${[5, 1.25, .5, .25].includes(kl) && L.plateColor(k, st) !== '#d7263d' ? 'lt' : [15, 10, 1.5, 1].includes(kl) ? 'ink' : ''} ${avail.has(k) ? '' : 'off'}" style="background:${L.plateColor(k, st)};border-radius:50%" data-act="plateTog" data-k="${k}" aria-pressed="${avail.has(k)}" aria-label="${fmt(k)} kg plates">${fmt(k)}</button>`; }).join('')}</div>${!st.micro ? `<p class="lede">${L.U(st).plates.filter(k => k < L.U(st).micro).map(fmt).join(' and ')} kg need Micro plates on in Weight steps.</p>` : ''}
   <div class="sec"><h5>Dumbbells</h5></div><div class="card list">${RW('db', 'Dumbbell rack', `${fmt(st.dbMin)} to ${fmt(st.dbMax)} kg`, `every ${fmt(st.steps.dumbbell)} kg`, 'data-act="eqEdit" data-t="db" data-id="rack"')}</div>
   <div class="sec"><h5>Kettlebells</h5><span>tap the ones you have</span></div><div class="chipz">${[4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48].map(k => `<button class="${st.kettlebells.includes(k) ? 'on' : ''}" data-act="kbTog" data-k="${k}">${k}</button>`).join('')}</div>
   <div class="sec"><h5>Machines</h5><button data-act="eqEdit" data-t="machine" data-id="new">+ add machine</button></div><div class="card list">${st.machines.map(m => RW(m.kind === 'plates' ? 'sled' : 'stack', m.name, m.kind === 'plates' ? 'Plate-loaded, sled counts' : m.kind === 'assist' ? `Counterweight ${m.min || 5} to ${m.max || 70} kg` : `Stack, ${m.plates || 20} plates of ${fmt(m.step)} kg`, m.kind === 'plates' ? kgs(m.sled || 0) : m.kind === 'assist' ? 'Assist' : 'Stack', `data-act="eqEdit" data-t="machine" data-id="${esc(m.id)}"`)).join('')}</div>
@@ -471,7 +497,7 @@ SHEETS.eq = {title: 'Equipment', render() {
   if (EQ.t === 'bar') body += `<div class="card" style="margin-top:12px;padding:14px 16px"><div class="lbl">Weight</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px"><b class="serif" style="font-size:52px;line-height:1">${fmt(v.kg)} kg</b><div class="pm"><button data-step="eq" data-f="kg" data-dir="-1" aria-label="Lighter">−</button><button data-step="eq" data-f="kg" data-dir="1" aria-label="Heavier">+</button></div></div></div>`;
   if (EQ.t === 'machine') {
     body += `<div class="seg wide" role="radiogroup">${[['plates', 'Plate-loaded'], ['stack', 'Weight stack'], ['assist', 'Assist']].map(([k, l]) => `<button class="${v.kind === k ? 'on' : ''}" data-act="eqF" data-f="kind" data-v="${k}">${l}</button>`).join('')}</div>`;
-    if (v.kind === 'plates') body += `<div class="card" style="margin-top:12px;padding:14px 16px"><div class="lbl">Sled / carriage weight</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px"><b class="serif" style="font-size:52px;line-height:1">${fmt(v.sled || 0)} kg</b><div class="pm"><button data-step="eq" data-f="sled" data-dir="-1" aria-label="Lighter">−</button><button data-step="eq" data-f="sled" data-dir="1" aria-label="Heavier">+</button></div></div><p class="lede">Most sleds are 40 to 70 kg; the label is usually on the carriage. Logged weight = sled + plates.</p></div>`;
+    if (v.kind === 'plates') body += `<div class="card" style="margin-top:12px;padding:14px 16px"><div class="lbl">Sled / carriage weight</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px"><b class="serif" style="font-size:52px;line-height:1">${fmt(v.sled || 0)} kg</b><div class="pm"><button data-step="eq" data-f="sled" data-dir="-1" aria-label="Lighter">−</button><button data-step="eq" data-f="sled" data-dir="1" aria-label="Heavier">+</button></div></div><p class="lede">Most sleds are ${L.unitOf(D.settings()) === 'lb' ? '90 to 155' : '40 to 70'} kg; the label is usually on the carriage. Logged weight = sled + plates.</p></div>`;
     if (v.kind === 'stack') body += `<div class="steps">${stepper('Plates', v.plates || 20, 'eq', 'data-f="plates"')}</div>`;
     if (v.kind === 'assist') body += `<div class="steps">${stepper('From kg', v.min || 5, 'eq', 'data-f="min"')}${stepper('To kg', v.max || 70, 'eq', 'data-f="max"')}</div>`;
     body += `<div class="card list" style="margin-top:10px">${sr('Weight step', segb('eqStep', [2.5, 5, 10].map(x => [x, fmt(x)]), v.step))}</div>`;
@@ -604,13 +630,14 @@ VIEWS.setup = {dock: false, render() {
   WI.bw = SETUP.bw;
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button></div><h3 class="ptl">Quick setup</h3><p class="lede">Three things, then you're lifting. All of it can change later in Settings.</p>
   <label class="card fld"><small>Your name (for home)</small><input data-in="suname" value="${esc(SETUP.name)}" maxlength="30" placeholder="optional" autocomplete="given-name"></label>
-  <div class="card" style="margin-top:12px;padding:14px 16px 10px"><div class="hd"><div><b style="font-size:15px;font-weight:800" data-body>Bodyweight</b><p>for pull-ups, dips and push-ups</p></div><b class="serif" style="font-size:40px" data-wv>${(+SETUP.bw).toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div>${strip('su', range(40, 140, .5), +SETUP.bw, v => fmt(v), 'small', 'Bodyweight')}</div>
-  <div class="card list" style="margin-top:12px">${sr('Bar weight', segb('suBar', [[20, '20'], [15, '15']], SETUP.bar), 'Your usual Olympic bar, kg')}${sr('Theme', segb('suTheme', [['light', 'Light'], ['dark', 'Dark'], ['device', 'Device']], SETUP.theme))}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}${sr('Units', '<span class="val">kg, km</span>')}</div>
+  <div class="card" style="margin-top:12px;padding:14px 16px 10px"><div class="hd"><div><b style="font-size:15px;font-weight:800" data-body>Bodyweight</b><p>for pull-ups, dips and push-ups</p></div><b class="serif" style="font-size:40px" data-wv>${(+SETUP.bw).toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small></b></div>${strip('su', range(...L.U(st).bwRange), +SETUP.bw, v => fmt(v), 'small', 'Bodyweight')}</div>
+  <div class="card list" style="margin-top:12px">${sr('Weight unit', segb('suUnit', [['kg', 'kg'], ['lb', 'lb']], L.unitOf(st)))}${sr('Bar weight', segb('suBar', L.unitOf(st) === 'lb' ? [[45, '45'], [35, '35']] : [[20, '20'], [15, '15']], SETUP.bar), 'Your usual Olympic bar, kg')}${sr('Theme', segb('suTheme', [['light', 'Light'], ['dark', 'Dark'], ['device', 'Device']], SETUP.theme))}${sr('Language', segb('lang', [['en', 'English'], ['zh', '简体中文']], st.lang))}${sr('Distance', segb('unitD', [['km', 'km'], ['mi', 'mi']], L.distUnit(st)))}</div>
   <button class="btn" style="margin-top:20px" data-act="suDone">Start lifting</button>`;
 }};
 STRIP.su = {live(v) { SETUP.bw = v; $$('[data-wv]').forEach(x => x.innerHTML = `${v.toFixed(1)}<small style="font-family:Manrope;font-size:13px;color:var(--soft)"> kg</small>`); }, set(v) { SETUP.bw = v; }};
 IN.suname = v => { SETUP.name = v.trim().slice(0, 30); };
 A.suBar = d => { SETUP.bar = +d.v; render(); };
+A.suUnit = d => { const from = L.unitOf(D.settings()); if (d.v === from) return; switchUnit(d.v); const f = d.v === 'lb' ? 1 / L.LB : L.LB, st = D.settings(); SETUP.bw = +(Math.round(SETUP.bw * f / L.U(st).bwRange[2]) * L.U(st).bwRange[2]).toFixed(1); SETUP.bar = st.bar; render(); };
 A.suTheme = d => { SETUP.theme = d.v; D.saveSettings({theme: d.v}); applyTheme(); render(); };
 A.suDone = () => {
   const st = D.settings(), bars = st.bars.map(b => b.id === 'olympic' ? Object.assign({}, b, {kg: SETUP.bar}) : b);
@@ -643,6 +670,17 @@ VIEWS.import1 = {dock: false, render() {
       <div class="row"><div class="addb">${ic('minus', 'sm')}</div><div class="grow"><b>Old settings left behind</b><small>Units, bar and rest come from Settings here</small></div></div></div>
     <div style="margin-top:16px">${need.length ? `<button class="btn" data-act="go" data-v="import2">Review ${need.length} exercise${need.length > 1 ? 's' : ''}</button>` : `<button class="btn" data-act="doImport">${ic('check')}Import ${plural(pl.workouts.length, 'workout')}</button>`}</div>`;
   }
+  if (pl && IMP.kind === 'garmin') {
+    const ws = L.garminWorkouts(pl, IMP.gdist), have = new Set(Store.all('workouts').map(w => w.id)), nw = ws.filter(w => !have.has(w.id)).length;
+    const byEx = {}; ws.forEach(w => { const id = w.items[0].exId; byEx[id] = (byEx[id] || 0) + 1; });
+    const skip = Object.entries(pl.skipped), nskip = skip.reduce((a, [, n]) => a + n, 0);
+    body += `<div class="stat3"><div class="card"><div class="lbl">Activities</div><b class="serif">${ws.length}</b></div><div class="card"><div class="lbl">New here</div><b class="serif">${nw}</b></div><div class="card"><div class="lbl">Skipped</div><b class="serif">${nskip}</b></div></div>
+    <div class="sec"><h5>What will happen</h5><span>${pl.from ? `${dShort(pl.from)} to ${dShort(pl.to)}` : ''}</span></div><div class="card list">
+      ${Object.entries(byEx).map(([id, n]) => `<div class="row"><div class="addb okm">${ic('check', 'sm')}</div><div class="grow"><b>${esc(exOf(id).name)}</b><small>${plural(n, 'activity', 'activities')}, time, distance and calories from your watch</small></div></div>`).join('')}
+      ${nskip ? `<div class="row"><div class="addb">${ic('minus', 'sm')}</div><div class="grow"><b>Not imported</b><small>${skip.map(([t, n]) => `${esc(t)} (${n})`).join(', ')}: LIFT has no exercise for these</small></div></div>` : ''}</div>
+    <div class="card list" style="margin-top:10px">${sr('Distances in this file', segb('impGdist', [['km', 'km'], ['mi', 'mi']], IMP.gdist), 'As set in Garmin Connect; rowing is always metres')}</div>
+    <div style="margin-top:16px"><button class="btn" data-act="doImport" ${nw ? '' : 'disabled'}>${ic('check')}${nw ? `Import ${plural(nw, 'activity', 'activities')}` : 'Nothing new to import'}</button></div>`;
+  }
   if (pl && IMP.kind === 'lift2') {
     const d = pl.data, have = new Set(Store.all('workouts').map(w => w.id)), nw = (d.workouts || []).filter(w => !have.has(w.id)).length;
     body += `<div class="stat3"><div class="card"><div class="lbl">Workouts</div><b class="serif">${(d.workouts || []).length}</b></div><div class="card"><div class="lbl">New here</div><b class="serif">${nw}</b></div><div class="card"><div class="lbl">Templates</div><b class="serif">${(d.templates || []).length}</b></div></div>
@@ -652,20 +690,23 @@ VIEWS.import1 = {dock: false, render() {
   return `<div class="hd"><button class="rb" data-act="impBack" aria-label="Back">${ic('back')}</button>${pl && IMP.kind === 'lift5' ? '<span class="tag w" style="font-size:12px;padding:5px 10px">step 1 of 2</span>' : ''}</div>
   <h3 class="ptl">Import</h3><p class="lede">Nothing changes until you press Import. Workouts already here stay; duplicates are skipped.</p>
   ${old ? `<div class="seg wide" role="radiogroup" aria-label="Import from"><button class="${IMP.src === 'phone' ? 'on' : ''}" data-act="impSrc" data-v="phone">Old LIFT on this phone</button><button class="${IMP.src === 'file' ? 'on' : ''}" data-act="impSrc" data-v="file">Backup file</button></div>` : ''}
-  ${IMP.src === 'file' ? `<div class="card list" style="margin-top:10px"><button class="row" data-act="impPick"><span class="addb">${ic('file', 'sm')}</span><span class="grow" style="min-width:0"><b style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${IMP.name && IMP.src === 'file' ? esc(IMP.name) : 'Choose a backup file'}</b><small>${IMP.size ? `${IMP.kind === 'lift2' ? 'LIFT 2' : 'LIFT 5'} backup, ${Math.max(1, Math.round(IMP.size / 1024))} KB` : 'A .json file from LIFT 5 or LIFT 2'}</small></span>${valc(IMP.name ? 'Change' : 'Choose')}</button></div>` : `<div class="card list" style="margin-top:10px"><div class="row"><span class="addb">${ic('phone', 'sm')}</span><div class="grow"><b class="t14">LIFT 5 data in this browser</b><small>Found automatically, weights as saved</small></div></div></div>`}
+  ${IMP.src === 'file' ? `<div class="card list" style="margin-top:10px"><button class="row" data-act="impPick"><span class="addb">${ic('file', 'sm')}</span><span class="grow" style="min-width:0"><b style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${IMP.name && IMP.src === 'file' ? esc(IMP.name) : 'Choose a backup file'}</b><small>${IMP.size ? `${IMP.kind === 'garmin' ? 'Garmin Connect activities' : (IMP.kind === 'lift2' ? 'LIFT 2' : 'LIFT 5') + ' backup'}, ${Math.max(1, Math.round(IMP.size / 1024))} KB` : 'A LIFT backup (.json), or Garmin Connect activities (.csv)'}</small></span>${valc(IMP.name ? 'Change' : 'Choose')}</button></div>${IMP.plan ? '' : '<p class="lede" style="margin-top:8px">Garmin: in Garmin Connect on a computer, open Activities, All Activities, then Export CSV. Runs, rides, walks, rowing, elliptical and stairs come in as cardio workouts.</p>'}` : `<div class="card list" style="margin-top:10px"><div class="row"><span class="addb">${ic('phone', 'sm')}</span><div class="grow"><b class="t14">LIFT 5 data in this browser</b><small>Found automatically, weights as saved</small></div></div></div>`}
   ${body}<button class="wghost" data-act="impBack">Cancel</button>`;
 }};
 A.impBack = () => { IMP = null; history.length > 1 ? history.back() : nav(defaultView(), {}, {replace: true}); };
 A.impSrc = d => { IMP = {src: d.v}; render(); };
-A.impPick = () => pickFile('.json,application/json', (text, f) => {
+A.impPick = () => pickFile('.json,.csv,application/json,text/csv', (text, f) => {
   IMP = {src: 'file', name: f.name, size: f.size};
   try {
+    /* a Garmin Connect activities export (CSV) */
+    if (/\.csv$/i.test(f.name) || /^\ufeff?"?activity type"?,/i.test(text.trim())) { IMP.kind = 'garmin'; IMP.plan = L.parseGarmin(text); IMP.gdist = L.distUnit(D.settings()); if (!IMP.plan.acts.length && !Object.keys(IMP.plan.skipped).length) throw new Error('No activities found in this file.'); render(); return; }
     let d; try { d = JSON.parse(text); } catch (e) { throw new Error('This is not a JSON file.'); }
     if (d && d.app === 'LIFT' && d.schema === 2 && d.data) { IMP.kind = 'lift2'; IMP.plan = {data: d.data, exported: d.exported}; IMP.withSettings = !!d.data.settings && !Store.all('workouts').length; }
     else { IMP.kind = 'lift5'; IMP.plan = L.planOldImport(d); if (!IMP.plan.workouts.length) throw new Error('No workouts found in this file.'); }
   } catch (e) { IMP.err = e.message; IMP.plan = null; }
   render();
 });
+A.impGdist = d => { IMP.gdist = d.v === 'mi' ? 'mi' : 'km'; render(); };
 A.impSettings = () => { IMP.withSettings = !IMP.withSettings; render(); };
 VIEWS.import2 = {dock: false, render() {
   if (!IMP || !IMP.plan || IMP.kind !== 'lift5') return VIEWS.import1.render();
@@ -684,16 +725,20 @@ A.impMap = d => { const x = IMP.plan.exercises[+d.i]; x.choice = d.v; render(); 
 A.doImport = () => {
   if (!IMP || !IMP.plan) return;
   let n = 0;
-  if (IMP.kind === 'lift5') {
-    const out = L.convertOldImport(IMP.plan, Store.uid);
+  if (IMP.kind === 'garmin') n = Store.merge('workouts', L.garminWorkouts(IMP.plan, IMP.gdist)).added; /* same activity, same id: never twice */
+  else if (IMP.kind === 'lift5') {
+    let out = L.convertOldImport(IMP.plan, Store.uid); /* always kg */
+    const lb = L.unitOf(D.settings()) === 'lb';
+    if (lb) { const c = L.convertUnits({workouts: out.workouts, weighins: out.weighins, exprefs: out.prefs}, 'kg', 'lb'); out = Object.assign({}, out, {workouts: c.workouts, weighins: c.weighins, prefs: c.exprefs}); }
     n = Store.merge('workouts', out.workouts).added;
     Store.merge('exercises', out.exercises);
     Store.merge('exprefs', out.prefs);
     Store.merge('templates', out.templates);
     Store.merge('weighins', out.weighins);
-    const fit = L.fitEquipment(out, D.settings()); if (Object.keys(fit.patch).length) D.saveSettings(fit.patch);
+    if (!lb) { const fit = L.fitEquipment(out, D.settings()); if (Object.keys(fit.patch).length) D.saveSettings(fit.patch); } /* fitting reads metric racks */
   } else {
-    const d = IMP.plan.data;
+    const to = L.unitOf(D.settings()), from = L.unitOf((IMP.plan.data || {}).settings);
+    const d = from === to ? IMP.plan.data : Object.assign({}, IMP.plan.data, L.convertUnits({workouts: IMP.plan.data.workouts || [], weighins: IMP.plan.data.weighins || [], exprefs: IMP.plan.data.exprefs || [], settings: IMP.plan.data.settings ? L.mergeSettings(IMP.plan.data.settings) : null}, from, to)); /* a backup from the other unit is converted on the way in */
     n = Store.merge('workouts', (d.workouts || []).filter(r => !r.deleted), {revive: true}).added;
     for (const c of ['exercises', 'exprefs', 'templates', 'weighins']) if (Array.isArray(d[c])) Store.merge(c, d[c].filter(r => !r.deleted), {revive: true});
     if (IMP.withSettings && d.settings) D.saveSettings(L.mergeSettings(d.settings));
@@ -726,7 +771,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 (function start() {
   if (!Store.available) { view.innerHTML = `<div class="card empty" style="margin-top:60px"><b>This browser is blocking storage.</b><p class="lede">LIFT keeps your workouts on this phone, so it needs site storage. Leave private mode or allow storage for this site.</p></div>`; return; }
   applyTheme();
-  I18N.setLang(D.settings().lang);
+  I18N.setLang(D.settings().lang); I18N.setUnits(L.unitOf(D.settings()));
   Store.persist();
   S.view = defaultView();
   history.replaceState({v: S.view, p: {}}, '');

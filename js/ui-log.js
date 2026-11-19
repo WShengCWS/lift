@@ -88,7 +88,7 @@ function setShort(x, e) {
 }
 function setLong(x, e) {
   if (!e) return '';
-  if (e.logType === 'cardio') { const d = L.cardioDerived(e, x, D.latestBw()); const bits = [Math.round((x.sec || 0) / 60) + ' min']; if (x.m) bits.push(x.m >= 1000 && !['row', 'ski'].includes(e.variant) ? fmt(x.m / 1000) + ' km' : x.m + ' m'); if (x.floors) bits.push(x.floors + ' floors'); if (x.cal) bits.push(x.cal + ' cal'); if (x.jumps) bits.push(x.jumps + ' jumps'); if (d.pairs[0]) bits.push(d.pairs[0][1] + ' ' + d.pairs[0][0].toLowerCase().replace('pace ', '')); return bits.join(', '); }
+  if (e.logType === 'cardio') { const d = L.cardioDerived(e, x, D.latestBw(), D.settings()); const bits = [Math.round((x.sec || 0) / 60) + ' min']; if (x.m) bits.push(x.m >= 1000 && !['row', 'ski'].includes(e.variant) ? distTxt(x.m) : x.m + ' m'); if (x.floors) bits.push(x.floors + ' floors'); if (x.cal) bits.push(x.cal + ' cal'); if (x.jumps) bits.push(x.jumps + ' jumps'); if (d.pairs[0]) bits.push(d.pairs[0][1] + ' ' + d.pairs[0][0].toLowerCase().replace('pace ', '')); return bits.join(', '); }
   if (e.logType === 'timed') return mmss(x.sec || 0) + (x.add ? ` with ${fmt(x.add)} kg` : '');
   if (e.logType === 'band') return `${esc(bandOf(x.band).name)} band × ${e.unilateral ? `${x.l || 0} / ${x.r || 0}` : x.reps || 0}`;
   const reps = e.unilateral ? `${x.l || 0} / ${x.r || 0}` : (x.reps || 0);
@@ -224,8 +224,8 @@ const LOGTYPE = {
   rack(s, it, e, c) {
     const st = D.settings();
     let vis;
-    if (e.variant === 'kettlebell') vis = `<div class="notch" aria-hidden="true"></div><div class="strip" data-strip="kg" data-for="${esc(c.id)}" role="listbox" aria-label="Kettlebell">${st.kettlebells.slice().sort((a, b) => a - b).map(k => { const col = L.KB_COLORS[k] || '#555b67', lt = [4, 6, 10, 14, 16, 18, 22, 40].includes(k); return `<button role="option" data-pick="${k}" class="${k === c.kg ? 'on' : ''}" style="background:radial-gradient(circle at 38% 30%,#ffffff55,transparent 45%),${col};color:${lt ? '#222' : '#fff'}">${k}</button>`; }).join('')}</div><div class="capx">swipe the kettlebells your gym has</div>`;
-    else if (e.variant === 'plate') vis = `<div class="plates">${[1.25, 2.5, 5, 10, 15, 20, 25].map(k => { const [hh] = PL[k]; const d = Math.max(26, hh * .36); return `<button data-act="setF" data-f="kg" data-v="${k}" class="${k === c.kg ? 'on' : ''}" aria-label="${k} kilogram plate"><span style="width:${d}px;height:${d}px;background:${L.PLATE_COLORS[k]};color:${[5, 1.25].includes(k) ? 'var(--plate-lt-ink)' : [15, 10].includes(k) ? 'var(--on-ok)' : 'var(--on-fill)'}">${fmt(k)}</span></button>`; }).join('')}</div><div class="capx">tap the plate you are holding</div>`;
+    if (e.variant === 'kettlebell') vis = `<div class="notch" aria-hidden="true"></div><div class="strip" data-strip="kg" data-for="${esc(c.id)}" role="listbox" aria-label="Kettlebell">${st.kettlebells.slice().sort((a, b) => a - b).map(k => { const kk = L.unitOf(st) === 'lb' ? Object.keys(L.KB_COLORS).map(Number).reduce((b, x) => Math.abs(x - k * L.LB) < Math.abs(b - k * L.LB) ? x : b) : k, col = L.KB_COLORS[kk] || '#555b67', lt = [4, 6, 10, 14, 16, 18, 22, 40].includes(kk); return `<button role="option" data-pick="${k}" class="${k === c.kg ? 'on' : ''}" style="background:radial-gradient(circle at 38% 30%,#ffffff55,transparent 45%),${col};color:${lt ? '#222' : '#fff'}">${k}</button>`; }).join('')}</div><div class="capx">swipe the kettlebells your gym has</div>`;
+    else if (e.variant === 'plate') vis = `<div class="plates">${L.U(st).rack.map(k => { const kl = L.plateLike(k, st), [hh] = PL[kl]; const d = Math.max(26, hh * .36); return `<button data-act="setF" data-f="kg" data-v="${k}" class="${k === c.kg ? 'on' : ''}" aria-label="${k} kilogram plate"><span style="width:${d}px;height:${d}px;background:${L.plateColor(k, st)};color:${[5, 1.25].includes(kl) ? 'var(--plate-lt-ink)' : [15, 10].includes(kl) ? 'var(--on-ok)' : 'var(--on-fill)'}">${fmt(k)}</span></button>`; }).join('')}</div><div class="capx">tap the plate you are holding</div>`;
     else vis = `${strip('kg', L.dumbbellRange(st), c.kg, v => fmt(v), '', 'Dumbbell weight', c.id)}<div class="capx">swipe the rack, ${fmt(st.dbMin)} to ${fmt(st.dbMax)} kg, every ${fmt(st.steps.dumbbell)} kg</div>`;
     const sub = e.pair ? `each hand, ${fmt(c.kg * 2)} kg total, ${lastBtn(e)}` : `${e.variant === 'plate' ? 'one plate' : e.variant === 'kettlebell' ? 'one kettlebell' : 'one dumbbell'}, ${lastBtn(e)}`;
     return `${bigKg(c.kg)}<div class="subw" data-sub>${sub}</div>${hintsRow(s, it, e, c)}<div class="card vis">${vis}</div>${e.distance ? distanceBlock(c) : repsSteppers(e, c, e.pair ? 'Weight each' : 'Weight', fmt(c.kg))}`;
@@ -247,7 +247,7 @@ const LOGTYPE = {
     const net = mode === 'assisted' ? bw - extra : bw + extra;
     const mid = mode === 'plain' ? '' : `<span class="op">${mode === 'added' ? '+' : '−'}</span><div class="eqt ${mode === 'assisted' ? 'help' : ''}"><small>${mode === 'added' ? 'Belt' : c.atype === 'band' ? esc(band.name.toUpperCase()) + ' BAND' : 'Assist'}</small><b data-extra>${fmt(extra)}</b></div>`;
     let picker = '';
-    if (mode === 'added') picker = strip('add', range(0, 60, st.steps.bw), c.add || 0, v => v ? '+' + fmt(v) : '0', '', 'Added weight', c.id) + `<div class="capx" data-cap>belt plates: ${L.splitPlates(c.add || 0, L.plateSet(st)).plates.join(' + ') || 'none'}, steps of ${fmt(st.steps.bw)} kg</div>`;
+    if (mode === 'added') picker = strip('add', range(0, L.U(st).added, st.steps.bw), c.add || 0, v => v ? '+' + fmt(v) : '0', '', 'Added weight', c.id) + `<div class="capx" data-cap>belt plates: ${L.splitPlates(c.add || 0, L.plateSet(st)).plates.join(' + ') || 'none'}, steps of ${fmt(st.steps.bw)} kg</div>`;
     if (mode === 'assisted') picker = `<div class="seg wide" style="margin:6px 6px 0" role="radiogroup"><button class="${c.atype !== 'machine' ? 'on' : ''}" data-act="setF" data-f="atype" data-v="band">Band</button><button class="${c.atype === 'machine' ? 'on' : ''}" data-act="setF" data-f="atype" data-v="machine">Assist machine</button></div>` +
       (c.atype !== 'machine' ? `<div class="bands">${st.bands.map(b => `<button data-act="bwBand" data-id="${esc(b.id)}" class="${b.id === c.band ? 'on' : ''}"><i style="background:${esc(b.color)}"></i>${esc(b.name)}<small>≈ ${fmt(b.kg)} kg</small></button>`).join('')}</div><div class="capx">pick the band you used</div>` : strip('assist', range(assistM.min || 5, assistM.max || 70, assistM.step || 5), Math.abs(c.add || 0), v => '−' + fmt(v), '', 'Counterweight', c.id) + `<div class="capx">counterweight on the assist machine</div>`);
     const lastR = (() => { const w = lastTop(e); return w ? Math.max(...w.map(x => L.setReps(x, e))) : null; })();
@@ -270,8 +270,8 @@ const LOGTYPE = {
       <div class="steps">${stepper('Seconds', c.sec || 0, 'cur', 'data-f="sec"')}${stepper('Added kg', fmt(c.add || 0), 'cur', 'data-f="add"')}</div>`;
   },
   cardio(s, it, e, c) {
-    const F = L.cardioFields(e).fields, bw = D.latestBw(), d = L.cardioDerived(e, c, bw);
-    const main = F.includes('distance') ? ['m', ['row', 'ski'].includes(e.variant) ? 'Metres' : 'km', ['row', 'ski'].includes(e.variant) ? (c.m || 0).toLocaleString('en-GB') : fmt((c.m || 0) / 1000)] : F.includes('floors') ? ['floors', 'Floors', c.floors || 0] : F.includes('calories') ? ['cal', 'Calories', c.cal || 0] : F.includes('jumps') ? ['jumps', 'Jumps', (c.jumps || 0).toLocaleString('en-GB')] : null;
+    const st = D.settings(), F = L.cardioFields(e).fields, bw = D.latestBw(), d = L.cardioDerived(e, c, bw, st);
+    const main = F.includes('distance') ? ['m', ['row', 'ski'].includes(e.variant) ? 'Metres' : dUnit(), ['row', 'ski'].includes(e.variant) ? (c.m || 0).toLocaleString('en-GB') : fmt(+L.distOut(c.m, st).toFixed(2))] : F.includes('floors') ? ['floors', 'Floors', c.floors || 0] : F.includes('calories') ? ['cal', 'Calories', c.cal || 0] : F.includes('jumps') ? ['jumps', 'Jumps', (c.jumps || 0).toLocaleString('en-GB')] : null;
     const sec2 = F.find(x => ['incline', 'resistance', 'level'].includes(x));
     const secLbl = {incline: 'INCLINE %', resistance: 'Resistance', level: 'Level'}[sec2];
     const tilesD = d.pairs.slice(0, 2).map(([l, v]) => `<div class="eqt"><small>${l}</small><b>${v}</b></div>`).join('');
@@ -299,14 +299,18 @@ function stepField(set, e, f, dir, n = 1) {
   switch (f) {
     case 'kg': {
       if (e.logType === 'rack' && e.variant === 'kettlebell') { const ks = st.kettlebells.slice().sort((a, b) => a - b); const i = ks.indexOf(set.kg); set.kg = ks[Math.max(0, Math.min(ks.length - 1, (i < 0 ? 0 : i) + dir))]; break; }
-      if (e.logType === 'rack' && e.variant === 'plate') { const ps = [1.25, 2.5, 5, 10, 15, 20, 25]; const i = ps.indexOf(set.kg); set.kg = ps[Math.max(0, Math.min(ps.length - 1, (i < 0 ? 3 : i) + dir))]; break; }
-      const step = L.stepFor(e, st) * big; set.kg = L.snapWeight(e, st, (+set.kg || 0) + dir * step); break;
+      if (e.logType === 'rack' && e.variant === 'plate') { const ps = L.U(st).rack; const i = ps.indexOf(set.kg); set.kg = ps[Math.max(0, Math.min(ps.length - 1, (i < 0 ? 3 : i) + dir))]; break; }
+      const step = L.stepFor(e, st) * big, kg = +set.kg || 0;
+      /* a weight between loadable ones (typed, or converted from the other unit): − / + go to the nearest loadable one below / above */
+      const grid = e.logType === 'barbell' || (e.logType === 'rack' && e.variant === 'dumbbell') || (e.logType === 'machine' && L.machineFor(e, st).kind === 'plates');
+      if (grid) { const min = e.logType === 'rack' ? st.dbMin : L.minFor(e, st), u = L.stepFor(e, st), k = (kg - min) / u; if (Math.abs(k - Math.round(k)) > 1e-6) { set.kg = L.snapWeight(e, st, +(min + (dir > 0 ? Math.ceil(k) : Math.floor(k)) * u).toFixed(2)); break; } }
+      set.kg = L.snapWeight(e, st, kg + dir * step); break;
     }
     case 'reps': case 'l': case 'r': set[f] = Math.max(0, (+set[f] || 0) + dir * big); break;
     case 'add': set.add = Math.max(0, +((+set.add || 0) + dir * st.steps.bw).toFixed(2)); break;
     case 'sec': set.sec = Math.max(0, (+set.sec || 0) + dir * 5 * big); break;
     case 'min': set.sec = Math.max(60, Math.round((+set.sec || 0) / 60) * 60 + dir * 60 * big); break;
-    case 'm': set.m = Math.max(0, (+set.m || 0) + dir * (e.logType === 'cardio' ? (DIST_STEP[e.variant] || 500) : 5) * big); break;
+    case 'm': if (e.logType === 'cardio' && L.distUnit(st) === 'mi' && !['row', 'ski'].includes(e.variant)) { const q = e.variant === 'bike' ? 0.5 : 0.25; set.m = Math.max(0, L.distIn(Math.round((L.distOut(set.m, st) + dir * q * big) / q) * q, st)); break; } set.m = Math.max(0, (+set.m || 0) + dir * (e.logType === 'cardio' ? (DIST_STEP[e.variant] || 500) : 5) * big); break;
     case 'floors': set.floors = Math.max(0, (+set.floors || 0) + dir * 5); break;
     case 'cal': set.cal = Math.max(0, (+set.cal || 0) + dir * 10); break;
     case 'jumps': set.jumps = Math.max(0, (+set.jumps || 0) + dir * 100); break;
@@ -590,7 +594,7 @@ SHEETS.set = {title: 'Edit set', render(sp) {
   else if (e.logType === 'bodyweight') fields = `<div class="steps">${stepper(x.mode === 'assisted' ? 'Assist kg' : 'Added kg', fmt(Math.abs(x.add || 0)), 'ed', 'data-f="addabs"')}${e.unilateral ? stepper('Left', x.l || 0, 'ed', 'data-f="l"') : stepper('Reps', x.reps || 0, 'ed', 'data-f="reps"')}</div>${e.unilateral ? `<div class="steps one">${stepper('Right', x.r || 0, 'ed', 'data-f="r"')}</div>` : ''}`;
   else if (e.logType === 'band') fields = `<div class="bands">${D.settings().bands.map(b => `<button data-act="edF" data-f="band" data-v="${esc(b.id)}" class="${b.id === x.band ? 'on' : ''}"><i style="background:${esc(b.color)}"></i>${esc(b.name)}</button>`).join('')}</div><div class="steps one">${stepper('Reps', x.reps || 0, 'ed', 'data-f="reps"')}</div>`;
   else if (e.logType === 'timed') fields = `<div class="steps">${stepper('Seconds', x.sec || 0, 'ed', 'data-f="sec"')}${stepper('Added kg', fmt(x.add || 0), 'ed', 'data-f="add"')}</div>`;
-  else fields = `<div class="steps">${stepper('Minutes', Math.round((x.sec || 0) / 60), 'ed', 'data-f="min"')}${L.cardioFields(e).fields.includes('distance') ? stepper('Metres', x.m || 0, 'ed', 'data-f="m"') : ''}</div>`;
+  else fields = `<div class="steps">${stepper('Minutes', Math.round((x.sec || 0) / 60), 'ed', 'data-f="min"')}${L.cardioFields(e).fields.includes('distance') ? (['row', 'ski'].includes(e.variant) ? stepper('Metres', x.m || 0, 'ed', 'data-f="m"') : stepper(dUnit() === 'mi' ? 'Miles' : 'Kilometres', fmt(+L.distOut(x.m, D.settings()).toFixed(2)), 'ed', 'data-f="m"')) : ''}</div>`;
   const types = ['barbell', 'rack', 'machine', 'bodyweight'].includes(e.logType) ? `<div class="seg wide" role="radiogroup" aria-label="Set type">${[['warmup', 'Warm-up'], ['working', 'Working'], ['drop', 'Drop'], ['failure', 'Failure']].map(([k, l]) => `<button role="radio" aria-checked="${x.type === k}" class="${x.type === k ? 'on' : ''}" data-act="edF" data-f="type" data-v="${k}">${l}</button>`).join('')}</div>` : '';
   return `<div class="hd"><div><h3>${esc(e.name)}</h3><p>${f.set.done ? 'Logged ' + (f.set.ts ? hhmm(f.set.ts) : '') : 'Planned set'}</p></div></div>${fields}${types}
     <label class="card fld"><small>Note</small><input data-in="setnote" value="${esc(x.note || '')}" maxlength="200" placeholder="felt heavy, paused reps"></label>
@@ -716,7 +720,7 @@ VIEWS.finish = {dock: false, render() {
   const first = s.title.trim() || 'Workout';
   return `<div class="hd"><button class="rb" data-act="back" aria-label="Back to logging">${ic('back')}</button>${prs.length ? `<span class="tag" style="font-size:12px;padding:5px 10px">${plural(prs.length, 'PR')}</span>` : ''}</div>
     <div class="fin"><p class="lbl" style="margin-top:18px">${esc(dLong(s.date))}</p><h3>${esc(first)}, done.</h3></div>
-    <div class="stat3"><div class="card"><div class="lbl">Time</div><b class="serif">${sum.min}<small> min</small></b></div><div class="card"><div class="lbl">Sets</div><b class="serif">${sum.sets}</b></div><div class="card"><div class="lbl">Volume</div><b class="serif">${sum.vol >= 1000 ? fmt(+(sum.vol / 1000).toFixed(1)) + '<small> t</small>' : Math.round(sum.vol) + '<small> kg</small>'}</b></div></div>
+    <div class="stat3"><div class="card"><div class="lbl">Time</div><b class="serif">${sum.min}<small> min</small></b></div><div class="card"><div class="lbl">Sets</div><b class="serif">${sum.sets}</b></div><div class="card"><div class="lbl">Volume</div><b class="serif">${bigW(sum.vol)}</b></div></div>
     ${skipped ? `<p class="lede" style="margin-top:10px">${plural(skipped, 'planned set')} not logged ${skipped === 1 ? 'is' : 'are'} left out.</p>` : ''}
     ${prs.length ? `<div class="sec"><h5>Personal records</h5></div><div class="card list">${prs.map(p => `<div class="row"><div class="addb okm">${ic('trophy', 'sm')}</div><div class="grow"><b>${esc(p.e.name)} ${setShort(p.x, p.e)}</b><small>${L.PR_LABEL[p.t[0]]}${['barbell', 'rack', 'machine'].includes(p.e.logType) && p.x.reps ? `, est. 1RM ${fmt(L.roundTo(L.e1rm(p.x.kg, p.x.reps, st.formula), st.steps.round))} kg` : ''}</small></div></div>`).join('')}</div>` : ''}
     ${hit.length ? `<div class="sec"><h5>Muscles hit</h5><span>sets this session</span></div><div class="card list">${hit.slice(0, 8).map(([m, n]) => mrow(m, n, st.ranges[m])).join('')}</div>` : ''}
